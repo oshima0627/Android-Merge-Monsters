@@ -1,0 +1,21 @@
+{
+  "name": "merge-monsters",
+  "version": "1.0.0",
+  "description": "Merge Monsters - A cute monster merge puzzle game",
+  "main": "www/index.html",
+  "scripts": {
+    "start": "npx serve www",
+    "cap:init": "npx cap init 'Merge Monsters' com.mergeMonsters.app --web-dir www",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0",
+    "@capacitor-community/admob": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}
