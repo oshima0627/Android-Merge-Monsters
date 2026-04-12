@@ -151,9 +151,9 @@ const UI = (() => {
         // Summon button
         drawSummonButton(ctx, w, h, summonCost, canSummon);
 
-        // Mute button (small, top right area)
+        // Mute button (left side, below HUD bar)
         const muteSize = 32;
-        muteButton = { x: w - muteSize - 8, y: 52, w: muteSize, h: muteSize };
+        muteButton = { x: 8, y: 52, w: muteSize, h: muteSize };
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.beginPath();

@@ -255,13 +255,13 @@ const Game = (() => {
             // Generate coins
             const cps = Grid.getTotalCoinsPerSecond();
             coinAccumulator += cps * dt;
+            coinSoundTimer -= dt;
             if (coinAccumulator >= 1) {
                 const whole = Math.floor(coinAccumulator);
                 coins += whole;
                 coinAccumulator -= whole;
 
                 // Coin particle + sound (throttled)
-                coinSoundTimer -= dt;
                 if (coinSoundTimer <= 0) {
                     coinSoundTimer = 0.5;
                     // Spawn coin pop from a random occupied cell
@@ -273,13 +273,6 @@ const Game = (() => {
                         Sound.coin();
                     }
                 }
-            } else {
-                coinSoundTimer -= dt;
-            }
-
-            // Check game over
-            if (Grid.isGameOver()) {
-                triggerGameOver();
             }
 
             // Draw
