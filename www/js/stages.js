@@ -8,7 +8,7 @@ const Stages = (() => {
     // merge_count: Total merges this stage
     // hold_coins: Have at least X coins at once
     // monsters_at_level: Have X monsters at level Y or above on the grid simultaneously
-    // total_merges: Cumulative merges across the game
+    // summon_count: Summon X monsters this stage
 
     const STAGE_DATA = [
         {
@@ -18,6 +18,7 @@ const Stages = (() => {
             missions: [
                 { type: 'merge_count', value: 3, label: '3回合体しよう' },
                 { type: 'hold_coins', value: 50, label: 'コインを50枚貯めよう' },
+                { type: 'summon_count', value: 5, label: '5体召喚しよう' },
             ],
             reward: 30,
         },
@@ -28,6 +29,7 @@ const Stages = (() => {
             missions: [
                 { type: 'merge_count', value: 8, label: '8回合体しよう' },
                 { type: 'monsters_at_level', value: 2, level: 2, label: 'Lv.2を2体同時に持とう' },
+                { type: 'hold_coins', value: 100, label: 'コインを100枚貯めよう' },
             ],
             reward: 50,
         },
@@ -38,6 +40,7 @@ const Stages = (() => {
             missions: [
                 { type: 'merge_count', value: 15, label: '15回合体しよう' },
                 { type: 'hold_coins', value: 200, label: 'コインを200枚貯めよう' },
+                { type: 'monsters_at_level', value: 3, level: 2, label: 'Lv.2以上を3体持とう' },
             ],
             reward: 80,
         },
@@ -48,6 +51,7 @@ const Stages = (() => {
             missions: [
                 { type: 'monsters_at_level', value: 3, level: 3, label: 'Lv.3以上を3体持とう' },
                 { type: 'merge_count', value: 25, label: '25回合体しよう' },
+                { type: 'hold_coins', value: 400, label: 'コインを400枚貯めよう' },
             ],
             reward: 150,
         },
@@ -58,6 +62,7 @@ const Stages = (() => {
             missions: [
                 { type: 'hold_coins', value: 500, label: 'コインを500枚貯めよう' },
                 { type: 'merge_count', value: 40, label: '40回合体しよう' },
+                { type: 'monsters_at_level', value: 2, level: 4, label: 'Lv.4以上を2体持とう' },
             ],
             reward: 300,
         },
@@ -68,6 +73,7 @@ const Stages = (() => {
             missions: [
                 { type: 'monsters_at_level', value: 2, level: 5, label: 'Lv.5以上を2体持とう' },
                 { type: 'hold_coins', value: 1000, label: 'コインを1000枚貯めよう' },
+                { type: 'merge_count', value: 55, label: '55回合体しよう' },
             ],
             reward: 500,
         },
@@ -76,8 +82,9 @@ const Stages = (() => {
             name: 'クールな進化',
             main: { type: 'reach_level', value: 8, label: 'Lv.8モンスターを作ろう' },
             missions: [
-                { type: 'merge_count', value: 60, label: '60回合体しよう' },
+                { type: 'merge_count', value: 70, label: '70回合体しよう' },
                 { type: 'monsters_at_level', value: 4, level: 4, label: 'Lv.4以上を4体持とう' },
+                { type: 'hold_coins', value: 2000, label: 'コインを2000枚貯めよう' },
             ],
             reward: 800,
         },
@@ -87,7 +94,8 @@ const Stages = (() => {
             main: { type: 'reach_level', value: 9, label: 'Lv.9モンスターを作ろう' },
             missions: [
                 { type: 'hold_coins', value: 3000, label: 'コインを3000枚貯めよう' },
-                { type: 'merge_count', value: 80, label: '80回合体しよう' },
+                { type: 'merge_count', value: 90, label: '90回合体しよう' },
+                { type: 'monsters_at_level', value: 3, level: 5, label: 'Lv.5以上を3体持とう' },
             ],
             reward: 1500,
         },
@@ -98,6 +106,7 @@ const Stages = (() => {
             missions: [
                 { type: 'monsters_at_level', value: 3, level: 6, label: 'Lv.6以上を3体持とう' },
                 { type: 'hold_coins', value: 5000, label: 'コインを5000枚貯めよう' },
+                { type: 'merge_count', value: 110, label: '110回合体しよう' },
             ],
             reward: 3000,
         },
@@ -106,8 +115,9 @@ const Stages = (() => {
             name: '伝説の領域',
             main: { type: 'reach_level', value: 12, label: 'Lv.12モンスターを作ろう' },
             missions: [
-                { type: 'merge_count', value: 120, label: '120回合体しよう' },
+                { type: 'merge_count', value: 150, label: '150回合体しよう' },
                 { type: 'monsters_at_level', value: 2, level: 9, label: 'Lv.9以上を2体持とう' },
+                { type: 'hold_coins', value: 10000, label: 'コインを10000枚貯めよう' },
             ],
             reward: 8000,
         },
@@ -118,6 +128,7 @@ const Stages = (() => {
             missions: [
                 { type: 'monsters_at_level', value: 5, level: 8, label: 'Lv.8以上を5体持とう' },
                 { type: 'merge_count', value: 200, label: '200回合体しよう' },
+                { type: 'hold_coins', value: 30000, label: 'コインを30000枚貯めよう' },
             ],
             reward: 50000,
         },
@@ -125,16 +136,18 @@ const Stages = (() => {
 
     let currentStageIndex = 0;
     let stageMergeCount = 0;
+    let stageSummonCount = 0;
     let stageCleared = false;
-    let stageResults = null; // { stars, reward } when stage is cleared
-    let completedMissions = [false, false]; // track bonus mission completion
+    let stageResults = null;
+    let completedMissions = [false, false, false];
 
     function init() {
         currentStageIndex = 0;
         stageMergeCount = 0;
+        stageSummonCount = 0;
         stageCleared = false;
         stageResults = null;
-        completedMissions = [false, false];
+        completedMissions = [false, false, false];
     }
 
     function getCurrentStage() {
@@ -166,12 +179,18 @@ const Stages = (() => {
         stageMergeCount++;
     }
 
+    function onSummon() {
+        stageSummonCount++;
+    }
+
     function checkMission(mission, gameState) {
         switch (mission.type) {
             case 'reach_level':
                 return gameState.highestLevel >= mission.value;
             case 'merge_count':
                 return stageMergeCount >= mission.value;
+            case 'summon_count':
+                return stageSummonCount >= mission.value;
             case 'hold_coins':
                 return gameState.coins >= mission.value;
             case 'monsters_at_level': {
@@ -202,11 +221,12 @@ const Stages = (() => {
             let stars = 1; // Main goal = 1 star
             if (completedMissions[0]) stars++;
             if (completedMissions[1]) stars++;
+            if (completedMissions[2]) stars++;
 
-            const bonusMultiplier = stars === 3 ? 1.5 : stars === 2 ? 1.2 : 1.0;
+            const bonusMultiplier = stars === 4 ? 2.0 : stars === 3 ? 1.5 : stars === 2 ? 1.2 : 1.0;
             const reward = Math.floor(stage.reward * bonusMultiplier);
 
-            stageResults = { stars, reward, stageName: stage.name, stageId: stage.id };
+            stageResults = { stars, maxStars: 4, reward, stageName: stage.name, stageId: stage.id };
             stageCleared = true;
         }
     }
@@ -233,9 +253,10 @@ const Stages = (() => {
     function advanceStage() {
         currentStageIndex++;
         stageMergeCount = 0;
+        stageSummonCount = 0;
         stageCleared = false;
         stageResults = null;
-        completedMissions = [false, false];
+        completedMissions = [false, false, false];
     }
 
     function saveStageProg() {
@@ -262,6 +283,7 @@ const Stages = (() => {
         isStageCleared,
         getStageResults,
         onMerge,
+        onSummon,
         checkProgress,
         getMissionStatus,
         advanceStage,

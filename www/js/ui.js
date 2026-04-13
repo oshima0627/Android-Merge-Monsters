@@ -445,7 +445,7 @@ const UI = (() => {
         const panelX = 8;
         const panelY = layout.gridY + layout.gridSize + 170;
         const panelW = w - 16;
-        const panelH = 80;
+        const panelH = 92;
 
         ctx.save();
 
@@ -473,17 +473,16 @@ const UI = (() => {
             const check = m.done ? '✅' : '⬜';
             ctx.fillStyle = m.done ? '#4CAF50' : '#888';
             ctx.font = `${10}px Arial, sans-serif`;
-            ctx.fillText(`${check} ${m.label}`, panelX + 10, panelY + 50 + i * 15);
+            ctx.fillText(`${check} ${m.label}`, panelX + 10, panelY + 50 + i * 13);
         }
 
         // Stars preview
         ctx.textAlign = 'right';
-        ctx.font = `${14}px Arial`;
+        ctx.font = `${13}px Arial`;
         const mainStar = status.mainDone ? '★' : '☆';
-        const s1 = status.missions[0].done ? '★' : '☆';
-        const s2 = status.missions[1].done ? '★' : '☆';
+        const bonusStars = status.missions.map(m => m.done ? '★' : '☆').join('');
         ctx.fillStyle = '#FFD700';
-        ctx.fillText(`${mainStar}${s1}${s2}`, panelX + panelW - 10, panelY + 14);
+        ctx.fillText(`${mainStar}${bonusStars}`, panelX + panelW - 10, panelY + 14);
 
         ctx.restore();
     }
@@ -532,9 +531,10 @@ const UI = (() => {
         ctx.fillText(`Stage ${results.stageId} - ${results.stageName}`, w / 2, panelY + panelH * 0.38);
 
         // Stars
-        ctx.font = `${w * 0.09}px Arial`;
+        ctx.font = `${w * 0.08}px Arial`;
+        const maxStars = results.maxStars || 4;
         let starsText = '';
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < maxStars; i++) {
             starsText += i < results.stars ? '★' : '☆';
         }
         ctx.fillStyle = '#FFD700';

@@ -182,6 +182,8 @@ const Game = (() => {
             Sound.summon();
         }
 
+        Stages.onSummon();
+
         // Check game over after summon
         if (Grid.isGameOver()) {
             triggerGameOver();
