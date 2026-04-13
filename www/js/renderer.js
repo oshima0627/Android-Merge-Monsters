@@ -11,6 +11,10 @@ const Renderer = (() => {
     let mergeAnimations = [];  // { row, col, level, progress, scale }
     let dragMonster = null;    // { row, col, level, x, y }
 
+    // Cache mergeable pairs (update every 500ms instead of every frame)
+    let cachedMergeablePairs = new Set();
+    let mergeableCacheTimer = 0;
+
     function init(canvasEl) {
         canvas = canvasEl;
         ctx = canvas.getContext('2d');
@@ -90,15 +94,13 @@ const Renderer = (() => {
         const gh = gridSize + padding * 2;
         const radius = 16;
 
-        // Shadow
-        ctx.shadowColor = 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 4;
+        // Fake shadow (offset dark rect instead of shadowBlur)
+        ctx.fillStyle = 'rgba(0,0,0,0.06)';
+        drawRoundRect(ctx, gx + 2, gy + 4, gw, gh, radius);
+        ctx.fill();
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
         drawRoundRect(ctx, gx, gy, gw, gh, radius);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
 
         // Grid lines (subtle)
         ctx.strokeStyle = 'rgba(0,0,0,0.05)';
@@ -118,8 +120,8 @@ const Renderer = (() => {
             ctx.stroke();
         }
 
-        // Mergeable hint pairs
-        const mergeablePairs = Grid.getMergeablePairs();
+        // Mergeable hint pairs (cached, updated every 500ms)
+        const mergeablePairs = cachedMergeablePairs;
 
         // Draw empty cell guides and monsters
         for (let r = 0; r < Grid.ROWS; r++) {
@@ -145,20 +147,19 @@ const Renderer = (() => {
                         continue;
                     }
 
-                    // Merge hint glow
+                    // Merge hint glow (lightweight ring, no shadowBlur)
                     const key = `${r},${c}`;
                     if (mergeablePairs.has(key)) {
-                        const pulse = 0.15 + Math.sin(time * 0.005) * 0.1;
+                        const pulse = 0.2 + Math.sin(time * 0.005) * 0.1;
                         const data = Monster.getLevelData(cell.level);
                         const glowColor = data.color === 'rainbow' ? '#FFD700' : data.color;
                         ctx.save();
-                        ctx.shadowColor = glowColor;
-                        ctx.shadowBlur = 12 + Math.sin(time * 0.005) * 6;
                         ctx.globalAlpha = pulse;
-                        ctx.fillStyle = glowColor;
+                        ctx.strokeStyle = glowColor;
+                        ctx.lineWidth = 3;
                         ctx.beginPath();
-                        ctx.arc(cx, cy, monsterRadius * 1.1, 0, Math.PI * 2);
-                        ctx.fill();
+                        ctx.arc(cx, cy, monsterRadius * 1.05, 0, Math.PI * 2);
+                        ctx.stroke();
                         ctx.restore();
                     }
 
@@ -190,16 +191,23 @@ const Renderer = (() => {
 
     function drawDraggedMonster(time) {
         if (!dragMonster) return;
-        // Draw slightly larger + shadow offset
+        // Draw fake shadow + slightly larger monster
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,0.25)';
-        ctx.shadowBlur = 16;
-        ctx.shadowOffsetY = 8;
-        Monster.draw(ctx, dragMonster.x, dragMonster.y, monsterRadius * 1.15, dragMonster.level, time, 0.9);
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.beginPath();
+        ctx.ellipse(dragMonster.x, dragMonster.y + monsterRadius * 0.9, monsterRadius * 0.8, monsterRadius * 0.25, 0, 0, Math.PI * 2);
+        ctx.fill();
+        Monster.draw(ctx, dragMonster.x, dragMonster.y - 4, monsterRadius * 1.15, dragMonster.level, time, 0.9);
         ctx.restore();
     }
 
     function updateAnimations(dt) {
+        // Update mergeable pairs cache
+        mergeableCacheTimer -= dt;
+        if (mergeableCacheTimer <= 0) {
+            cachedMergeablePairs = Grid.getMergeablePairs();
+            mergeableCacheTimer = 0.5;
+        }
         for (let i = mergeAnimations.length - 1; i >= 0; i--) {
             mergeAnimations[i].progress += dt;
             if (mergeAnimations[i].progress >= mergeAnimations[i].duration) {

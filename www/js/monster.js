@@ -70,29 +70,26 @@ const Monster = (() => {
             bodyColor = data.color;
         }
 
-        // Body glow for high levels
+        // Body glow for high levels (lightweight ring instead of shadowBlur)
         if (level >= 5) {
-            ctx.shadowColor = data.color === 'rainbow' ? '#FFD700' : data.color;
-            ctx.shadowBlur = 8 + Math.sin(time * 0.005) * 4;
+            const glowColor = data.color === 'rainbow' ? 'rgba(255,215,0,0.2)' : data.color;
+            ctx.fillStyle = glowColor;
+            ctx.globalAlpha = 0.15 + Math.sin(time * 0.005) * 0.05;
+            ctx.beginPath();
+            ctx.arc(x, y, radius * 1.15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = alpha;
         }
 
         ctx.fillStyle = bodyColor;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
-        // Body highlight
-        const highlightGrad = ctx.createRadialGradient(
-            x - radius * 0.3, y - radius * 0.3, 0,
-            x, y, radius
-        );
-        highlightGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
-        highlightGrad.addColorStop(0.5, 'rgba(255,255,255,0.1)');
-        highlightGrad.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.fillStyle = highlightGrad;
+        // Body highlight (simple white overlay, no gradient)
+        ctx.fillStyle = 'rgba(255,255,255,0.2)';
         ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.arc(x - radius * 0.2, y - radius * 0.25, radius * 0.6, 0, Math.PI * 2);
         ctx.fill();
 
         // Body outline

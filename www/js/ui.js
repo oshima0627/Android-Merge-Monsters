@@ -78,15 +78,10 @@ const UI = (() => {
         const btnY = h * 0.68;
         startButton = { x: btnX, y: btnY, w: btnW, h: btnH };
 
-        // Button shadow
-        ctx.shadowColor = 'rgba(255,107,107,0.3)';
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 4;
+        // Button (no shadow)
         ctx.fillStyle = '#FF6B6B';
         Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
 
         // Button highlight
         const btnGrad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
@@ -197,14 +192,9 @@ const UI = (() => {
         ctx.save();
         const baseColor = canSummon ? '#4CAF50' : '#999';
         ctx.globalAlpha = canSummon ? 1.0 : 0.6;
-        ctx.shadowColor = canSummon ? 'rgba(76,175,80,0.3)' : 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 8;
-        ctx.shadowOffsetY = 2;
         ctx.fillStyle = baseColor;
         Renderer.drawRoundRect(ctx, mainX, btnY, mainW, btnH, btnH / 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
         ctx.globalAlpha = 1;
 
         ctx.textAlign = 'center';
@@ -224,9 +214,6 @@ const UI = (() => {
 
         ctx.save();
         if (freeReady) {
-            ctx.shadowColor = 'rgba(68,136,255,0.4)';
-            ctx.shadowBlur = 8;
-            ctx.shadowOffsetY = 2;
             ctx.fillStyle = '#4488FF';
         } else {
             ctx.globalAlpha = 0.4;
@@ -234,8 +221,6 @@ const UI = (() => {
         }
         Renderer.drawRoundRect(ctx, freeX, btnY, freeW, btnH, btnH / 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetY = 0;
         ctx.globalAlpha = 1;
 
         ctx.textAlign = 'center';
@@ -373,12 +358,12 @@ const UI = (() => {
         const panelX = (w - panelW) / 2;
         const panelY = (h - panelH) / 2 - h * 0.03;
 
-        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-        ctx.shadowBlur = 20;
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        Renderer.drawRoundRect(ctx, panelX + 2, panelY + 4, panelW, panelH, 20);
+        ctx.fill();
         ctx.fillStyle = '#fff';
         Renderer.drawRoundRect(ctx, panelX, panelY, panelW, panelH, 20);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -532,12 +517,12 @@ const UI = (() => {
         ctx.scale(scale, scale);
         ctx.translate(-w / 2, -(h / 2 - h * 0.05));
 
-        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-        ctx.shadowBlur = 20;
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        Renderer.drawRoundRect(ctx, panelX + 2, panelY + 4, panelW, panelH, 16);
+        ctx.fill();
         ctx.fillStyle = '#fff';
         Renderer.drawRoundRect(ctx, panelX, panelY, panelW, panelH, 16);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -591,12 +576,12 @@ const UI = (() => {
         const px = (w - pw) / 2;
         const py = h * 0.35;
 
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        Renderer.drawRoundRect(ctx, px + 2, py + 3, pw, ph, 16);
+        ctx.fill();
         ctx.fillStyle = '#fff';
-        ctx.shadowColor = 'rgba(0,0,0,0.2)';
-        ctx.shadowBlur = 15;
         Renderer.drawRoundRect(ctx, px, py, pw, ph, 16);
         ctx.fill();
-        ctx.shadowBlur = 0;
 
         // Step indicator
         ctx.fillStyle = '#FF6B6B';
