@@ -24,6 +24,10 @@ const Game = (() => {
     const BONUS_AD_COOLDOWN = 60;
     let bonusAdCooldown = 0;
 
+    // Free summon timer (seconds)
+    const FREE_SUMMON_INTERVAL = 30;
+    let freeSummonTimer = 0;
+
     // Milestone tracking
     const MILESTONES = [5, 8, 10, 12, 15];
     const MILESTONE_BONUS = { 5: 100, 8: 500, 10: 2000, 12: 8000, 15: 50000 };
@@ -63,6 +67,7 @@ const Game = (() => {
         reachedMilestones = new Set();
         coinAccumulator = 0;
         bonusAdCooldown = 0;
+        freeSummonTimer = FREE_SUMMON_INTERVAL;
 
         Grid.init();
         Particles.clear();
@@ -134,14 +139,26 @@ const Game = (() => {
 
     function handleSummon() {
         if (state !== STATE_PLAYING) return;
+        if (Grid.isFull()) return;
 
         const cost = Monster.summonCost(summonCount);
         if (coins < cost) return;
-        if (Grid.isFull()) return;
 
         coins -= cost;
         summonCount++;
+        doSummon();
+    }
 
+    function handleFreeSummon() {
+        if (state !== STATE_PLAYING) return;
+        if (Grid.isFull()) return;
+        if (freeSummonTimer > 0) return;
+
+        freeSummonTimer = FREE_SUMMON_INTERVAL;
+        doSummon();
+    }
+
+    function doSummon() {
         // Spawn Lv.1 or Lv.2
         const level = Math.random() < 0.8 ? 1 : 2;
         const result = Grid.spawnRandom(level);
@@ -176,6 +193,10 @@ const Game = (() => {
         if (state === STATE_PLAYING) {
             if (UI.hitTestSummonButton(x, y)) {
                 handleSummon();
+                return;
+            }
+            if (UI.hitTestFreeSummonButton(x, y) && freeSummonTimer <= 0) {
+                handleFreeSummon();
                 return;
             }
             if (UI.hitTestBonusCoinButton(x, y) && bonusAdCooldown <= 0) {
@@ -301,10 +322,21 @@ const Game = (() => {
                 }
             }
 
-            // Bonus ad cooldown
+            // Bonus ad cooldown (skip cooldown when player can't afford summon)
             if (bonusAdCooldown > 0) {
-                bonusAdCooldown -= dt;
-                if (bonusAdCooldown < 0) bonusAdCooldown = 0;
+                const cost = Monster.summonCost(summonCount);
+                if (coins < cost && freeSummonTimer > 0) {
+                    bonusAdCooldown = 0;
+                } else {
+                    bonusAdCooldown -= dt;
+                    if (bonusAdCooldown < 0) bonusAdCooldown = 0;
+                }
+            }
+
+            // Free summon timer
+            if (freeSummonTimer > 0) {
+                freeSummonTimer -= dt;
+                if (freeSummonTimer < 0) freeSummonTimer = 0;
             }
 
             // Draw
@@ -313,14 +345,18 @@ const Game = (() => {
             Renderer.drawGrid(timestamp);
             Renderer.drawDraggedMonster(timestamp);
 
-            const cost = Monster.summonCost(summonCount);
-            const canSummon = coins >= cost && !Grid.isFull();
+            const summonCost = Monster.summonCost(summonCount);
+            const canSummon = coins >= summonCost && !Grid.isFull();
             const bonusCoinInfo = {
                 available: bonusAdCooldown <= 0,
                 cooldownLeft: bonusAdCooldown,
                 bonusAmount: getBonusCoinAmount(),
             };
-            UI.drawHUD(ctx, w, h, coins, score, cost, canSummon, bonusCoinInfo);
+            const freeSummonInfo = {
+                ready: freeSummonTimer <= 0 && !Grid.isFull(),
+                cooldownLeft: freeSummonTimer,
+            };
+            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo);
 
             Particles.update(dt);
             Particles.draw(ctx);

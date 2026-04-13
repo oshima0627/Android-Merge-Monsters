@@ -5,6 +5,7 @@ const UI = (() => {
     // Button rectangles for hit testing
     let startButton = { x: 0, y: 0, w: 0, h: 0 };
     let summonButton = { x: 0, y: 0, w: 0, h: 0 };
+    let freeSummonButton = { x: 0, y: 0, w: 0, h: 0 };
     let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
@@ -112,7 +113,7 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo) {
         ctx.save();
 
         // Top bar background
@@ -151,6 +152,9 @@ const UI = (() => {
 
         // Summon button
         drawSummonButton(ctx, w, h, summonCost, canSummon);
+
+        // Free summon button
+        drawFreeSummonButton(ctx, w, h, freeSummonInfo);
 
         // Bonus coin ad button
         drawBonusCoinButton(ctx, w, h, bonusCoinInfo);
@@ -218,6 +222,63 @@ const UI = (() => {
         ctx.restore();
     }
 
+    function drawFreeSummonButton(ctx, w, h, info) {
+        if (!info) {
+            freeSummonButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const btnW = w * 0.4;
+        const btnH = 38;
+        const btnX = (w - btnW) / 2;
+        const btnY = layout.gridY + layout.gridSize + 80;
+        freeSummonButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.save();
+
+        if (info.ready) {
+            // Ready - pulsing blue button
+            ctx.shadowColor = 'rgba(68,136,255,0.4)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = '#4488FF';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+            grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+            ctx.fillText('FREE SUMMON!', w / 2, btnY + btnH / 2);
+        } else {
+            // Cooldown
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = '#888';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = `bold ${12}px Arial, sans-serif`;
+            const secs = Math.ceil(info.cooldownLeft);
+            ctx.fillText(`FREE (${secs}s)`, w / 2, btnY + btnH / 2);
+        }
+
+        ctx.restore();
+    }
+
     function drawBonusCoinButton(ctx, w, h, info) {
         // info = { available, cooldownLeft, bonusAmount }
         if (!info) {
@@ -229,7 +290,7 @@ const UI = (() => {
         const btnW = w * 0.55;
         const btnH = 42;
         const btnX = (w - btnW) / 2;
-        const btnY = layout.gridY + layout.gridSize + 82;
+        const btnY = layout.gridY + layout.gridSize + 126;
         bonusCoinButton = { x: btnX, y: btnY, w: btnW, h: btnH };
 
         ctx.save();
@@ -472,6 +533,10 @@ const UI = (() => {
         return hitRect(rewardButton, x, y);
     }
 
+    function hitTestFreeSummonButton(x, y) {
+        return hitRect(freeSummonButton, x, y);
+    }
+
     function hitTestBonusCoinButton(x, y) {
         return hitRect(bonusCoinButton, x, y);
     }
@@ -501,6 +566,7 @@ const UI = (() => {
         updateOverlays,
         hitTestStartButton,
         hitTestSummonButton,
+        hitTestFreeSummonButton,
         hitTestBonusCoinButton,
         hitTestRestartButton,
         hitTestRewardButton,
