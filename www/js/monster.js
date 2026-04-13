@@ -32,7 +32,7 @@ const Monster = (() => {
     }
 
     function coinsPerSecond(level) {
-        return level * 3;
+        return level * 1.5;
     }
 
     function summonCost(summonCount) {
