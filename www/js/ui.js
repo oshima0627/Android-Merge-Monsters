@@ -314,7 +314,7 @@ const UI = (() => {
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${11}px Arial, sans-serif`;
             const bm = speedInfo ? speedInfo.adBoostMult || 1.5 : 1.5;
-            ctx.fillText(`📺 x${bm.toFixed(1)} boost`, rcX + halfW / 2, rowY + btnH / 2);
+            ctx.fillText(`🚀 x${bm.toFixed(1)} boost`, rcX + halfW / 2, rowY + btnH / 2);
         }
         ctx.restore();
     }

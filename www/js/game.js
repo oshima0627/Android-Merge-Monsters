@@ -301,7 +301,7 @@ const Game = (() => {
                 return;
             }
             if (UI.hitTestSpeedBoostButton(x, y) && adBoostTimer <= 0) {
-                watchSpeedBoostAd();
+                activateSpeedBoost();
                 return;
             }
             if (UI.hitTestMuteButton(x, y)) {
@@ -356,13 +356,12 @@ const Game = (() => {
         Sound.milestone();
     }
 
-    function watchSpeedBoostAd() {
+    function activateSpeedBoost() {
+        if (adBoostTimer > 0) return;
         const boostMult = getAdBoostMultiplier();
-        Ads.showReward(() => {
-            adBoostTimer = AD_BOOST_DURATION;
-            UI.showMilestone(`COIN x${boostMult.toFixed(1)} BOOST! 60s`);
-            Sound.milestone();
-        });
+        adBoostTimer = AD_BOOST_DURATION;
+        UI.showMilestone(`COIN x${boostMult.toFixed(1)} BOOST! 60s`);
+        Sound.milestone();
     }
 
     function getCoinSpeedInfo() {
