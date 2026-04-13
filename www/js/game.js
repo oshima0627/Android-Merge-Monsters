@@ -20,13 +20,48 @@ const Game = (() => {
     let coinAccumulator = 0;
     let coinSoundTimer = 0;
 
+    // Bonus coin ad cooldown (seconds)
+    const BONUS_AD_COOLDOWN = 60;
+    let bonusAdCooldown = 0;
+
+    // Free summon timer (seconds)
+    const FREE_SUMMON_INTERVAL = 30;
+    let freeSummonTimer = 0;
+
+    // Coin speed system
+    // 1) Permanent upgrade (purchased with coins)
+    const UPGRADE_COSTS = [30, 80, 200, 500, 1200, 2500, 5000, 10000, 20000, 50000];
+    const UPGRADE_MULTIPLIERS = [1.0, 1.2, 1.4, 1.7, 2.0, 2.5, 3.0, 3.8, 4.8, 6.0, 8.0];
+    let coinUpgradeLevel = 0;
+    // 2) Ad boost (temporary, scales with upgrade level)
+    const AD_BOOST_DURATION = 60;
+    const AD_BOOST_MULTIPLIERS = [2.0, 2.2, 2.5, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0];
+    let adBoostTimer = 0;
+    function getAdBoostMultiplier() {
+        return AD_BOOST_MULTIPLIERS[coinUpgradeLevel] || AD_BOOST_MULTIPLIERS[AD_BOOST_MULTIPLIERS.length - 1];
+    }
+    // 3) Stage bonus (auto-increases with stage)
+    function getStageMultiplier() {
+        return 1 + (Stages.getStageNumber() - 1) * 0.1;
+    }
+    function getTotalCoinMultiplier() {
+        const upgrade = UPGRADE_MULTIPLIERS[coinUpgradeLevel] || UPGRADE_MULTIPLIERS[UPGRADE_MULTIPLIERS.length - 1];
+        const adBoost = adBoostTimer > 0 ? getAdBoostMultiplier() : 1.0;
+        const stage = getStageMultiplier();
+        return upgrade * adBoost * stage;
+    }
+
     // Milestone tracking
     const MILESTONES = [5, 8, 10, 12, 15];
-    const MILESTONE_BONUS = { 5: 100, 8: 500, 10: 2000, 12: 8000, 15: 50000 };
+    const MILESTONE_BONUS = { 5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000 };
     let reachedMilestones = new Set();
 
     // Last frame time
     let lastTime = 0;
+
+    // Stage clear overlay timer
+    let stageClearTimer = 0;
+    const STAGE_CLEAR_DURATION = 3.0;
 
     function loadSave() {
         try {
@@ -36,6 +71,8 @@ const Game = (() => {
             highScore = 0;
             bestLevel = 0;
         }
+        Stages.loadStageProg();
+        loadCoinUpgrade();
     }
 
     function saveBest() {
@@ -45,6 +82,14 @@ const Game = (() => {
         } catch (e) {
             // localStorage might not be available
         }
+    }
+
+    function saveCoinUpgrade() {
+        try { localStorage.setItem('mm_coinUpgrade', coinUpgradeLevel.toString()); } catch (e) {}
+    }
+
+    function loadCoinUpgrade() {
+        try { coinUpgradeLevel = parseInt(localStorage.getItem('mm_coinUpgrade') || '0', 10); } catch (e) { coinUpgradeLevel = 0; }
     }
 
     function startGame() {
@@ -58,6 +103,11 @@ const Game = (() => {
         hasRewardAvailable = true;
         reachedMilestones = new Set();
         coinAccumulator = 0;
+        bonusAdCooldown = 0;
+        freeSummonTimer = FREE_SUMMON_INTERVAL;
+        adBoostTimer = 0;
+        coinUpgradeLevel = 0;
+        saveCoinUpgrade();
 
         Grid.init();
         Particles.clear();
@@ -70,6 +120,10 @@ const Game = (() => {
                 Particles.spawnSummon(pos.x, pos.y);
             }
         }
+
+        stageClearTimer = 0;
+        Stages.init();
+        Stages.loadStageProg();
 
         Ads.showBanner();
         Sound.resume();
@@ -100,6 +154,10 @@ const Game = (() => {
         // Check milestones
         checkMilestones(result.level);
 
+        // Stage progress
+        Stages.onMerge();
+        checkStageProgress();
+
         // Check high score
         if (score > highScore) {
             if (!isNewRecord && highScore > 0) {
@@ -129,16 +187,47 @@ const Game = (() => {
 
     function handleSummon() {
         if (state !== STATE_PLAYING) return;
+        if (Grid.isFull()) return;
 
         const cost = Monster.summonCost(summonCount);
         if (coins < cost) return;
-        if (Grid.isFull()) return;
 
         coins -= cost;
         summonCount++;
+        doSummon();
+    }
 
-        // Spawn Lv.1 or Lv.2
-        const level = Math.random() < 0.8 ? 1 : 2;
+    function handleFreeSummon() {
+        if (state !== STATE_PLAYING) return;
+        if (Grid.isFull()) return;
+        if (freeSummonTimer > 0) return;
+
+        freeSummonTimer = FREE_SUMMON_INTERVAL;
+        doSummon();
+    }
+
+    function getSummonLevel() {
+        // Higher levels unlock as highestLevel increases
+        // highestLevel 1-3: Lv.1 (80%) / Lv.2 (20%)
+        // highestLevel 4+:  rare chance of Lv.3+
+        const maxBonus = Math.max(0, highestLevel - 3);
+        if (maxBonus <= 0) return Math.random() < 0.8 ? 1 : 2;
+
+        const roll = Math.random() * 100;
+        // Rare: higher level monster (2% per bonus level, max 20%)
+        const rareChance = Math.min(20, maxBonus * 2);
+        if (roll < rareChance) {
+            const maxLv = Math.min(highestLevel - 2, 3 + Math.floor(maxBonus / 2));
+            return Math.max(3, 3 + Math.floor(Math.random() * (maxLv - 2)));
+        }
+        // Lv.2 (25%)
+        if (roll < rareChance + 25) return 2;
+        // Lv.1
+        return 1;
+    }
+
+    function doSummon() {
+        const level = getSummonLevel();
         const result = Grid.spawnRandom(level);
         if (result) {
             const pos = Renderer.cellToPixel(result.row, result.col);
@@ -146,6 +235,8 @@ const Game = (() => {
             Renderer.addMergeAnimation(result.row, result.col, result.level);
             Sound.summon();
         }
+
+        Stages.onSummon();
 
         // Check game over after summon
         if (Grid.isGameOver()) {
@@ -173,6 +264,22 @@ const Game = (() => {
                 handleSummon();
                 return;
             }
+            if (UI.hitTestFreeSummonButton(x, y) && freeSummonTimer <= 0) {
+                handleFreeSummon();
+                return;
+            }
+            if (UI.hitTestBonusCoinButton(x, y) && bonusAdCooldown <= 0) {
+                watchBonusCoinAd();
+                return;
+            }
+            if (UI.hitTestCoinUpgradeButton(x, y)) {
+                handleCoinUpgrade();
+                return;
+            }
+            if (UI.hitTestSpeedBoostButton(x, y) && adBoostTimer <= 0) {
+                watchSpeedBoostAd();
+                return;
+            }
             if (UI.hitTestMuteButton(x, y)) {
                 Sound.setMuted(!Sound.isMuted());
                 return;
@@ -192,6 +299,69 @@ const Game = (() => {
         }
     }
 
+    function getBonusCoinAmount() {
+        // Bonus = enough coins to summon ~20 monsters from current summon count
+        let total = 0;
+        for (let i = 0; i < 20; i++) {
+            total += Monster.summonCost(summonCount + i);
+        }
+        return Math.floor(total);
+    }
+
+    function watchBonusCoinAd() {
+        const bonus = getBonusCoinAmount();
+        Ads.showReward(() => {
+            coins += bonus;
+            bonusAdCooldown = BONUS_AD_COOLDOWN;
+            UI.showMilestone(`+${bonus} coins!`);
+            Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+            Sound.milestone();
+        });
+    }
+
+    function handleCoinUpgrade() {
+        if (coinUpgradeLevel >= UPGRADE_COSTS.length) return;
+        const cost = UPGRADE_COSTS[coinUpgradeLevel];
+        if (coins < cost) return;
+        coins -= cost;
+        coinUpgradeLevel++;
+        saveCoinUpgrade();
+        const mult = UPGRADE_MULTIPLIERS[coinUpgradeLevel];
+        UI.showMilestone(`SPEED UP! x${mult.toFixed(1)}`);
+        Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+        Sound.milestone();
+    }
+
+    function watchSpeedBoostAd() {
+        const boostMult = getAdBoostMultiplier();
+        Ads.showReward(() => {
+            adBoostTimer = AD_BOOST_DURATION;
+            UI.showMilestone(`COIN x${boostMult.toFixed(1)} BOOST! 60s`);
+            Sound.milestone();
+        });
+    }
+
+    function getCoinSpeedInfo() {
+        const nextCost = coinUpgradeLevel < UPGRADE_COSTS.length ? UPGRADE_COSTS[coinUpgradeLevel] : null;
+        const canUpgrade = nextCost !== null && coins >= nextCost;
+        const adBoostMult = getAdBoostMultiplier();
+        const currentMult = getTotalCoinMultiplier();
+        const nextMult = coinUpgradeLevel < UPGRADE_MULTIPLIERS.length - 1
+            ? UPGRADE_MULTIPLIERS[coinUpgradeLevel + 1] : null;
+        return {
+            level: coinUpgradeLevel,
+            maxLevel: UPGRADE_COSTS.length,
+            nextCost,
+            canUpgrade,
+            currentMult,
+            nextMult,
+            adBoostActive: adBoostTimer > 0,
+            adBoostLeft: adBoostTimer,
+            adBoostMult,
+            stageBonus: getStageMultiplier(),
+        };
+    }
+
     function watchRewardAd() {
         Ads.showReward(() => {
             // Reward: remove 2 lowest monsters
@@ -202,6 +372,29 @@ const Game = (() => {
                 Sound.summon();
             }
         });
+    }
+
+    function getGameState() {
+        return { highestLevel, coins, mergeCount };
+    }
+
+    function checkStageProgress() {
+        if (Stages.isAllCleared() || Stages.isStageCleared()) return;
+        Stages.checkProgress(getGameState());
+        if (Stages.isStageCleared()) {
+            const results = Stages.getStageResults();
+            coins += results.reward;
+            stageClearTimer = STAGE_CLEAR_DURATION;
+            Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+            Sound.milestone();
+            Stages.saveStageProg();
+        }
+    }
+
+    function advanceToNextStage() {
+        Stages.advanceStage();
+        Stages.saveStageProg();
+        stageClearTimer = 0;
     }
 
     function checkMilestones(level) {
@@ -252,16 +445,17 @@ const Game = (() => {
         }
 
         if (state === STATE_PLAYING) {
-            // Generate coins
-            const cps = Grid.getTotalCoinsPerSecond();
+            // Generate coins (with multiplier)
+            const baseCps = Grid.getTotalCoinsPerSecond();
+            const cps = baseCps * getTotalCoinMultiplier();
             coinAccumulator += cps * dt;
+            coinSoundTimer -= dt;
             if (coinAccumulator >= 1) {
                 const whole = Math.floor(coinAccumulator);
                 coins += whole;
                 coinAccumulator -= whole;
 
                 // Coin particle + sound (throttled)
-                coinSoundTimer -= dt;
                 if (coinSoundTimer <= 0) {
                     coinSoundTimer = 0.5;
                     // Spawn coin pop from a random occupied cell
@@ -273,13 +467,29 @@ const Game = (() => {
                         Sound.coin();
                     }
                 }
-            } else {
-                coinSoundTimer -= dt;
             }
 
-            // Check game over
-            if (Grid.isGameOver()) {
-                triggerGameOver();
+            // Bonus ad cooldown (skip cooldown when player can't afford summon)
+            if (bonusAdCooldown > 0) {
+                const cost = Monster.summonCost(summonCount);
+                if (coins < cost && freeSummonTimer > 0) {
+                    bonusAdCooldown = 0;
+                } else {
+                    bonusAdCooldown -= dt;
+                    if (bonusAdCooldown < 0) bonusAdCooldown = 0;
+                }
+            }
+
+            // Ad boost timer
+            if (adBoostTimer > 0) {
+                adBoostTimer -= dt;
+                if (adBoostTimer < 0) adBoostTimer = 0;
+            }
+
+            // Free summon timer
+            if (freeSummonTimer > 0) {
+                freeSummonTimer -= dt;
+                if (freeSummonTimer < 0) freeSummonTimer = 0;
             }
 
             // Draw
@@ -288,14 +498,49 @@ const Game = (() => {
             Renderer.drawGrid(timestamp);
             Renderer.drawDraggedMonster(timestamp);
 
-            const cost = Monster.summonCost(summonCount);
-            const canSummon = coins >= cost && !Grid.isFull();
-            UI.drawHUD(ctx, w, h, coins, score, cost, canSummon);
+            const summonCost = Monster.summonCost(summonCount);
+            const canSummon = coins >= summonCost && !Grid.isFull();
+            const bonusCoinInfo = {
+                available: bonusAdCooldown <= 0,
+                cooldownLeft: bonusAdCooldown,
+                bonusAmount: getBonusCoinAmount(),
+            };
+            const freeSummonInfo = {
+                ready: freeSummonTimer <= 0 && !Grid.isFull(),
+                cooldownLeft: freeSummonTimer,
+            };
+            const coinSpeedInfo = getCoinSpeedInfo();
+            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo);
 
             Particles.update(dt);
             Particles.draw(ctx);
             UI.updateOverlays(dt);
             UI.drawOverlays(ctx, w, h, timestamp);
+
+            // Stage mission display
+            if (!Stages.isAllCleared()) {
+                const missionStatus = Stages.getMissionStatus(getGameState());
+                if (missionStatus) {
+                    UI.drawStageInfo(ctx, w, h, missionStatus);
+                }
+            }
+
+            // Check stage progress for coin-based missions
+            if (!Stages.isStageCleared()) {
+                checkStageProgress();
+            }
+
+            // Stage clear overlay
+            if (stageClearTimer > 0) {
+                stageClearTimer -= dt;
+                const results = Stages.getStageResults();
+                if (results) {
+                    UI.drawStageClear(ctx, w, h, results, 1 - (stageClearTimer / STAGE_CLEAR_DURATION));
+                }
+                if (stageClearTimer <= 0) {
+                    advanceToNextStage();
+                }
+            }
 
             // Banner ad space (bottom 60px)
             if (Ads.isBannerShowing()) {

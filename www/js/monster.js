@@ -32,11 +32,11 @@ const Monster = (() => {
     }
 
     function coinsPerSecond(level) {
-        return Math.pow(level, 1.5);
+        return Math.pow(level, 1.2);
     }
 
     function summonCost(summonCount) {
-        return Math.floor(10 * Math.pow(1.08, summonCount));
+        return Math.floor(10 + summonCount * 2 + Math.pow(summonCount, 1.4) * 0.3);
     }
 
     function createRainbowGradient(ctx, x, y, radius, time) {

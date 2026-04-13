@@ -1,5 +1,5 @@
 /**
- * AdMob integration via @capacitor-community/admob.
+ * AdMob integration via @capacitor-community/admob v6.
  */
 const Ads = (() => {
     const BANNER_ID = 'ca-app-pub-4718076434751586/8180818511';
@@ -10,18 +10,19 @@ const Ads = (() => {
     let bannerShowing = false;
     let gameOverCount = 0;
     let rewardCallback = null;
+    let AdMobRef = null;
 
     async function init() {
         try {
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
-                const { AdMob } = window.Capacitor.Plugins;
-                await AdMob.initialize({
+                AdMobRef = window.Capacitor.Plugins.AdMob;
+                await AdMobRef.initialize({
                     initializeForTesting: false,
                 });
                 admobAvailable = true;
 
-                // Listen for reward
-                AdMob.addListener('onRewardedVideoAdReward', () => {
+                // Listen for reward earned
+                AdMobRef.addListener('onRewardedVideoAdReward', () => {
                     if (rewardCallback) {
                         rewardCallback();
                         rewardCallback = null;
@@ -40,12 +41,12 @@ const Ads = (() => {
     async function showBanner() {
         if (!admobAvailable || bannerShowing) return;
         try {
-            const { AdMob } = window.Capacitor.Plugins;
-            await AdMob.showBanner({
+            await AdMobRef.showBanner({
                 adId: BANNER_ID,
                 adSize: 'BANNER',
                 position: 'BOTTOM_CENTER',
                 margin: 0,
+                isTesting: false,
             });
             bannerShowing = true;
         } catch (e) {
@@ -56,8 +57,7 @@ const Ads = (() => {
     async function hideBanner() {
         if (!admobAvailable || !bannerShowing) return;
         try {
-            const { AdMob } = window.Capacitor.Plugins;
-            await AdMob.hideBanner();
+            await AdMobRef.hideBanner();
             bannerShowing = false;
         } catch (e) {
             console.warn('Banner hide failed:', e);
@@ -70,9 +70,11 @@ const Ads = (() => {
         // Show every 3rd game over
         if (gameOverCount % 3 !== 0) return;
         try {
-            const { AdMob } = window.Capacitor.Plugins;
-            await AdMob.prepareInterstitial({ adId: INTERSTITIAL_ID });
-            await AdMob.showInterstitial();
+            await AdMobRef.prepareInterstitial({
+                adId: INTERSTITIAL_ID,
+                isTesting: false,
+            });
+            await AdMobRef.showInterstitial();
         } catch (e) {
             console.warn('Interstitial failed:', e);
         }
@@ -87,9 +89,11 @@ const Ads = (() => {
         }
         rewardCallback = callback;
         try {
-            const { AdMob } = window.Capacitor.Plugins;
-            await AdMob.prepareRewardVideoAd({ adId: REWARD_ID });
-            await AdMob.showRewardVideoAd();
+            await AdMobRef.prepareRewardVideoAd({
+                adId: REWARD_ID,
+                isTesting: false,
+            });
+            await AdMobRef.showRewardVideoAd();
         } catch (e) {
             console.warn('Reward ad failed:', e);
             rewardCallback = null;

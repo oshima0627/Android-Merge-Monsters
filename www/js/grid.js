@@ -100,7 +100,7 @@ const Grid = (() => {
         return { row: spot.row, col: spot.col, level: level };
     }
 
-    function hasMergeableNeighbors() {
+    function hasMergeablePair() {
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
                 const cell = cells[r][c];
@@ -123,7 +123,7 @@ const Grid = (() => {
 
     function isGameOver() {
         if (!isFull()) return false;
-        return !hasMergeableNeighbors();
+        return !hasMergeablePair();
     }
 
     function getMergeablePairs() {
@@ -205,7 +205,7 @@ const Grid = (() => {
         merge,
         placeMonster,
         spawnRandom,
-        hasMergeableNeighbors,
+        hasMergeablePair,
         isGameOver,
         getMergeablePairs,
         removeLowestTwo,

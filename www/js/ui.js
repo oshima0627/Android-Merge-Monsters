@@ -5,6 +5,10 @@ const UI = (() => {
     // Button rectangles for hit testing
     let startButton = { x: 0, y: 0, w: 0, h: 0 };
     let summonButton = { x: 0, y: 0, w: 0, h: 0 };
+    let freeSummonButton = { x: 0, y: 0, w: 0, h: 0 };
+    let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
+    let coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
+    let speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
     let muteButton = { x: 0, y: 0, w: 0, h: 0 };
@@ -111,7 +115,7 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo) {
         ctx.save();
 
         // Top bar background
@@ -139,21 +143,36 @@ const UI = (() => {
         ctx.font = `bold ${15}px Arial, sans-serif`;
         ctx.fillText(formatNumber(score), w - 18, hudY + 8);
 
-        // Coins per second (center)
+        // Coins per second (center) with multiplier
         ctx.textAlign = 'center';
         ctx.font = `${11}px Arial, sans-serif`;
-        ctx.fillStyle = '#999';
-        const cps = Grid.getTotalCoinsPerSecond();
-        ctx.fillText(`+${cps.toFixed(1)}/s`, w / 2, hudY);
+        const mult = coinSpeedInfo ? coinSpeedInfo.currentMult : 1;
+        const cps = Grid.getTotalCoinsPerSecond() * mult;
+        if (mult > 1) {
+            ctx.fillStyle = coinSpeedInfo && coinSpeedInfo.adBoostActive ? '#FF6B6B' : '#4CAF50';
+            ctx.fillText(`+${cps.toFixed(1)}/s (x${mult.toFixed(1)})`, w / 2, hudY);
+        } else {
+            ctx.fillStyle = '#999';
+            ctx.fillText(`+${cps.toFixed(1)}/s`, w / 2, hudY);
+        }
 
         ctx.restore();
 
         // Summon button
         drawSummonButton(ctx, w, h, summonCost, canSummon);
 
-        // Mute button (small, top right area)
+        // Free summon button
+        drawFreeSummonButton(ctx, w, h, freeSummonInfo);
+
+        // Bonus coin ad button
+        drawBonusCoinButton(ctx, w, h, bonusCoinInfo);
+
+        // Coin speed buttons (upgrade + ad boost)
+        drawCoinSpeedButtons(ctx, w, h, coinSpeedInfo);
+
+        // Mute button (left side, below HUD bar)
         const muteSize = 32;
-        muteButton = { x: w - muteSize - 8, y: 52, w: muteSize, h: muteSize };
+        muteButton = { x: 8, y: 52, w: muteSize, h: muteSize };
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.beginPath();
@@ -210,6 +229,201 @@ const UI = (() => {
         ctx.font = `${13}px Arial, sans-serif`;
         ctx.fillStyle = canSummon ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
         ctx.fillText(`🪙 ${formatNumber(cost)}`, w / 2, btnY + btnH / 2 + 12);
+
+        ctx.restore();
+    }
+
+    function drawCoinSpeedButtons(ctx, w, h, info) {
+        if (!info) {
+            coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
+            speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const baseY = layout.gridY + layout.gridSize + 170;
+        const btnH = 34;
+        const gap = 6;
+
+        ctx.save();
+
+        // Upgrade button (left)
+        const ubW = w * 0.46;
+        const ubX = 8;
+        coinUpgradeButton = { x: ubX, y: baseY, w: ubW, h: btnH };
+
+        if (info.level < info.maxLevel) {
+            const canBuy = info.canUpgrade;
+            ctx.fillStyle = canBuy ? '#8B5CF6' : '#888';
+            ctx.globalAlpha = canBuy ? 1 : 0.5;
+            Renderer.drawRoundRect(ctx, ubX, baseY, ubW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            ctx.fillText(`⬆ SPEED Lv.${info.level + 1}`, ubX + ubW / 2, baseY + btnH / 2 - 6);
+            ctx.font = `${10}px Arial, sans-serif`;
+            ctx.fillStyle = canBuy ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
+            ctx.fillText(`🪙 ${formatNumber(info.nextCost)}`, ubX + ubW / 2, baseY + btnH / 2 + 7);
+        } else {
+            ctx.fillStyle = '#8B5CF6';
+            Renderer.drawRoundRect(ctx, ubX, baseY, ubW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            ctx.fillText('⬆ SPEED MAX!', ubX + ubW / 2, baseY + btnH / 2);
+        }
+
+        // Speed boost ad button (right)
+        const sbW = w * 0.46;
+        const sbX = w - sbW - 8;
+        speedBoostButton = { x: sbX, y: baseY, w: sbW, h: btnH };
+
+        if (info.adBoostActive) {
+            // Active boost - show timer
+            ctx.fillStyle = '#FF6B6B';
+            Renderer.drawRoundRect(ctx, sbX, baseY, sbW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12}px Arial, sans-serif`;
+            const bm = info.adBoostMult || 2;
+            ctx.fillText(`🔥 x${bm.toFixed(1)} BOOST ${Math.ceil(info.adBoostLeft)}s`, sbX + sbW / 2, baseY + btnH / 2);
+        } else {
+            // Available
+            ctx.fillStyle = '#FF8800';
+            Renderer.drawRoundRect(ctx, sbX, baseY, sbW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            const bm = info.adBoostMult || 2;
+            ctx.fillText(`📺 x${bm.toFixed(1)} BOOST 60s`, sbX + sbW / 2, baseY + btnH / 2);
+        }
+
+        ctx.restore();
+    }
+
+    function drawFreeSummonButton(ctx, w, h, info) {
+        if (!info) {
+            freeSummonButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const btnW = w * 0.4;
+        const btnH = 38;
+        const btnX = (w - btnW) / 2;
+        const btnY = layout.gridY + layout.gridSize + 80;
+        freeSummonButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.save();
+
+        if (info.ready) {
+            // Ready - pulsing blue button
+            ctx.shadowColor = 'rgba(68,136,255,0.4)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = '#4488FF';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+            grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+            ctx.fillText('FREE SUMMON!', w / 2, btnY + btnH / 2);
+        } else {
+            // Cooldown
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = '#888';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = `bold ${12}px Arial, sans-serif`;
+            const secs = Math.ceil(info.cooldownLeft);
+            ctx.fillText(`FREE (${secs}s)`, w / 2, btnY + btnH / 2);
+        }
+
+        ctx.restore();
+    }
+
+    function drawBonusCoinButton(ctx, w, h, info) {
+        // info = { available, cooldownLeft, bonusAmount }
+        if (!info) {
+            bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const btnW = w * 0.55;
+        const btnH = 42;
+        const btnX = (w - btnW) / 2;
+        const btnY = layout.gridY + layout.gridSize + 126;
+        bonusCoinButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.save();
+
+        if (info.available) {
+            // Active state - golden button
+            ctx.shadowColor = 'rgba(255,184,0,0.3)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 3;
+            ctx.fillStyle = '#FFB800';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Highlight
+            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+            grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+
+            // Text
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+            ctx.fillText(`📺 AD: +${formatNumber(info.bonusAmount)} coins`, w / 2, btnY + btnH / 2);
+        } else {
+            // Cooldown state - greyed out with timer
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#999';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = `bold ${13}px Arial, sans-serif`;
+            const secs = Math.ceil(info.cooldownLeft);
+            ctx.fillText(`📺 AD (${secs}s)`, w / 2, btnY + btnH / 2);
+        }
 
         ctx.restore();
     }
@@ -314,6 +528,115 @@ const UI = (() => {
         ctx.restore();
     }
 
+    function drawStageInfo(ctx, w, h, status) {
+        // Draw stage info panel on the right side of the grid area
+        const layout = Renderer.getGridLayout();
+        const panelX = 8;
+        const panelY = layout.gridY + layout.gridSize + 212;
+        const panelW = w - 16;
+        const panelH = 92;
+
+        ctx.save();
+
+        // Background
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        Renderer.drawRoundRect(ctx, panelX, panelY, panelW, panelH, 10);
+        ctx.fill();
+
+        // Stage title
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#FF6B6B';
+        ctx.font = `bold ${12}px Arial, sans-serif`;
+        ctx.fillText(`STAGE ${status.stageId} - ${status.stageName}`, panelX + 10, panelY + 14);
+
+        // Main goal
+        const mainCheck = status.mainDone ? '✅' : '⬜';
+        ctx.fillStyle = status.mainDone ? '#4CAF50' : '#333';
+        ctx.font = `bold ${11}px Arial, sans-serif`;
+        ctx.fillText(`${mainCheck} ${status.mainLabel}`, panelX + 10, panelY + 32);
+
+        // Bonus missions
+        for (let i = 0; i < status.missions.length; i++) {
+            const m = status.missions[i];
+            const check = m.done ? '✅' : '⬜';
+            ctx.fillStyle = m.done ? '#4CAF50' : '#888';
+            ctx.font = `${10}px Arial, sans-serif`;
+            ctx.fillText(`${check} ${m.label}`, panelX + 10, panelY + 50 + i * 13);
+        }
+
+        // Stars preview
+        ctx.textAlign = 'right';
+        ctx.font = `${13}px Arial`;
+        const mainStar = status.mainDone ? '★' : '☆';
+        const bonusStars = status.missions.map(m => m.done ? '★' : '☆').join('');
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(`${mainStar}${bonusStars}`, panelX + panelW - 10, panelY + 14);
+
+        ctx.restore();
+    }
+
+    function drawStageClear(ctx, w, h, results, progress) {
+        ctx.save();
+
+        // Fade in
+        const alpha = Math.min(1, progress * 3);
+        ctx.globalAlpha = alpha;
+
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(0, 0, w, h);
+
+        // Panel
+        const panelW = w * 0.78;
+        const panelH = h * 0.32;
+        const panelX = (w - panelW) / 2;
+        const panelY = (h - panelH) / 2 - h * 0.05;
+
+        // Bounce in
+        const scale = progress < 0.15 ? (progress / 0.15) * 1.1 : progress < 0.25 ? 1.1 - (progress - 0.15) / 0.1 * 0.1 : 1.0;
+        ctx.translate(w / 2, h / 2 - h * 0.05);
+        ctx.scale(scale, scale);
+        ctx.translate(-w / 2, -(h / 2 - h * 0.05));
+
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = '#fff';
+        Renderer.drawRoundRect(ctx, panelX, panelY, panelW, panelH, 16);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // "STAGE CLEAR!"
+        ctx.fillStyle = '#FF6B6B';
+        ctx.font = `bold ${w * 0.065}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText('STAGE CLEAR!', w / 2, panelY + panelH * 0.18);
+
+        // Stage name
+        ctx.fillStyle = '#666';
+        ctx.font = `${w * 0.035}px Arial, sans-serif`;
+        ctx.fillText(`Stage ${results.stageId} - ${results.stageName}`, w / 2, panelY + panelH * 0.38);
+
+        // Stars
+        ctx.font = `${w * 0.08}px Arial`;
+        const maxStars = results.maxStars || 4;
+        let starsText = '';
+        for (let i = 0; i < maxStars; i++) {
+            starsText += i < results.stars ? '★' : '☆';
+        }
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(starsText, w / 2, panelY + panelH * 0.6);
+
+        // Reward
+        ctx.fillStyle = '#4CAF50';
+        ctx.font = `bold ${w * 0.04}px Arial, sans-serif`;
+        ctx.fillText(`+${formatNumber(results.reward)} coins!`, w / 2, panelY + panelH * 0.82);
+
+        ctx.restore();
+    }
+
     function showMilestone(text) {
         milestoneText = { text: text, progress: 0, duration: 2.0 };
     }
@@ -408,6 +731,22 @@ const UI = (() => {
         return hitRect(rewardButton, x, y);
     }
 
+    function hitTestFreeSummonButton(x, y) {
+        return hitRect(freeSummonButton, x, y);
+    }
+
+    function hitTestBonusCoinButton(x, y) {
+        return hitRect(bonusCoinButton, x, y);
+    }
+
+    function hitTestCoinUpgradeButton(x, y) {
+        return hitRect(coinUpgradeButton, x, y);
+    }
+
+    function hitTestSpeedBoostButton(x, y) {
+        return hitRect(speedBoostButton, x, y);
+    }
+
     function hitTestMuteButton(x, y) {
         return hitRect(muteButton, x, y);
     }
@@ -428,11 +767,17 @@ const UI = (() => {
         drawSummonButton,
         drawGameOver,
         drawOverlays,
+        drawStageInfo,
+        drawStageClear,
         showMilestone,
         showNewRecord,
         updateOverlays,
         hitTestStartButton,
         hitTestSummonButton,
+        hitTestFreeSummonButton,
+        hitTestBonusCoinButton,
+        hitTestCoinUpgradeButton,
+        hitTestSpeedBoostButton,
         hitTestRestartButton,
         hitTestRewardButton,
         hitTestMuteButton,
