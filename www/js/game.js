@@ -204,9 +204,28 @@ const Game = (() => {
         doSummon();
     }
 
+    function getSummonLevel() {
+        // Higher levels unlock as highestLevel increases
+        // highestLevel 1-3: Lv.1 (80%) / Lv.2 (20%)
+        // highestLevel 4+:  rare chance of Lv.3+
+        const maxBonus = Math.max(0, highestLevel - 3);
+        if (maxBonus <= 0) return Math.random() < 0.8 ? 1 : 2;
+
+        const roll = Math.random() * 100;
+        // Rare: higher level monster (2% per bonus level, max 20%)
+        const rareChance = Math.min(20, maxBonus * 2);
+        if (roll < rareChance) {
+            const maxLv = Math.min(highestLevel - 2, 3 + Math.floor(maxBonus / 2));
+            return Math.max(3, 3 + Math.floor(Math.random() * (maxLv - 2)));
+        }
+        // Lv.2 (25%)
+        if (roll < rareChance + 25) return 2;
+        // Lv.1
+        return 1;
+    }
+
     function doSummon() {
-        // Spawn Lv.1 or Lv.2
-        const level = Math.random() < 0.8 ? 1 : 2;
+        const level = getSummonLevel();
         const result = Grid.spawnRandom(level);
         if (result) {
             const pos = Renderer.cellToPixel(result.row, result.col);
