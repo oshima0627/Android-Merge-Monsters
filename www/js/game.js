@@ -56,6 +56,10 @@ const Game = (() => {
     const MILESTONE_BONUS = { 5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000 };
     let reachedMilestones = new Set();
 
+    // Tutorial
+    let showTutorial = false;
+    let tutorialStep = 0; // 0: drag, 1: merge, 2: summon
+
     // Last frame time
     let lastTime = 0;
 
@@ -94,7 +98,7 @@ const Game = (() => {
 
     function startGame() {
         state = STATE_PLAYING;
-        coins = 30;
+        coins = 80;
         score = 0;
         mergeCount = 0;
         summonCount = 0;
@@ -104,7 +108,7 @@ const Game = (() => {
         reachedMilestones = new Set();
         coinAccumulator = 0;
         bonusAdCooldown = 0;
-        freeSummonTimer = FREE_SUMMON_INTERVAL;
+        freeSummonTimer = 0;
         adBoostTimer = 0;
         coinUpgradeLevel = 0;
         saveCoinUpgrade();
@@ -125,9 +129,25 @@ const Game = (() => {
         Stages.init();
         Stages.loadStageProg();
 
+        // Show tutorial on first ever play
+        try {
+            if (!localStorage.getItem('mm_tutorialDone')) {
+                showTutorial = true;
+                tutorialStep = 0;
+            }
+        } catch (e) {}
+
         Ads.showBanner();
         Sound.resume();
         Sound.buttonTap();
+    }
+
+    function dismissTutorial() {
+        tutorialStep++;
+        if (tutorialStep >= 3) {
+            showTutorial = false;
+            try { localStorage.setItem('mm_tutorialDone', '1'); } catch (e) {}
+        }
     }
 
     function handleMerge(srcRow, srcCol, dstRow, dstCol) {
@@ -260,6 +280,10 @@ const Game = (() => {
         }
 
         if (state === STATE_PLAYING) {
+            if (showTutorial) {
+                dismissTutorial();
+                return;
+            }
             if (UI.hitTestSummonButton(x, y)) {
                 handleSummon();
                 return;
@@ -287,7 +311,7 @@ const Game = (() => {
         }
 
         if (state === STATE_GAMEOVER) {
-            if (UI.hitTestRewardButton(x, y) && hasRewardAvailable) {
+            if (UI.hitTestRewardButton(x, y)) {
                 watchRewardAd();
                 return;
             }
@@ -364,10 +388,9 @@ const Game = (() => {
 
     function watchRewardAd() {
         Ads.showReward(() => {
-            // Reward: remove 2 lowest monsters
+            // Reward: remove 2 lowest monsters (repeatable)
             const removed = Grid.removeLowestTwo();
             if (removed > 0) {
-                hasRewardAvailable = false;
                 state = STATE_PLAYING;
                 Sound.summon();
             }
@@ -542,6 +565,11 @@ const Game = (() => {
                 }
             }
 
+            // Tutorial overlay
+            if (showTutorial) {
+                UI.drawTutorial(ctx, w, h, tutorialStep);
+            }
+
             // Banner ad space (bottom 60px)
             if (Ads.isBannerShowing()) {
                 ctx.fillStyle = 'rgba(0,0,0,0.05)';
@@ -560,7 +588,7 @@ const Game = (() => {
             Particles.update(dt);
             Particles.draw(ctx);
 
-            UI.drawGameOver(ctx, w, h, score, highestLevel, highScore, isNewRecord, hasRewardAvailable);
+            UI.drawGameOver(ctx, w, h, score, highestLevel, highScore, isNewRecord, true);
         }
 
         requestAnimationFrame(update);
