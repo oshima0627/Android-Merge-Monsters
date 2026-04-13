@@ -28,6 +28,25 @@ const Game = (() => {
     const FREE_SUMMON_INTERVAL = 30;
     let freeSummonTimer = 0;
 
+    // Coin speed system
+    // 1) Permanent upgrade (purchased with coins)
+    const UPGRADE_COSTS = [50, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000];
+    const UPGRADE_MULTIPLIERS = [1.0, 1.2, 1.4, 1.7, 2.0, 2.5, 3.0, 3.8, 4.8, 6.0, 8.0];
+    let coinUpgradeLevel = 0;
+    // 2) Ad boost (temporary 2x for 60 seconds)
+    const AD_BOOST_DURATION = 60;
+    let adBoostTimer = 0;
+    // 3) Stage bonus (auto-increases with stage)
+    function getStageMultiplier() {
+        return 1 + (Stages.getStageNumber() - 1) * 0.1;
+    }
+    function getTotalCoinMultiplier() {
+        const upgrade = UPGRADE_MULTIPLIERS[coinUpgradeLevel] || UPGRADE_MULTIPLIERS[UPGRADE_MULTIPLIERS.length - 1];
+        const adBoost = adBoostTimer > 0 ? 2.0 : 1.0;
+        const stage = getStageMultiplier();
+        return upgrade * adBoost * stage;
+    }
+
     // Milestone tracking
     const MILESTONES = [5, 8, 10, 12, 15];
     const MILESTONE_BONUS = { 5: 100, 8: 500, 10: 2000, 12: 8000, 15: 50000 };
@@ -49,6 +68,7 @@ const Game = (() => {
             bestLevel = 0;
         }
         Stages.loadStageProg();
+        loadCoinUpgrade();
     }
 
     function saveBest() {
@@ -58,6 +78,14 @@ const Game = (() => {
         } catch (e) {
             // localStorage might not be available
         }
+    }
+
+    function saveCoinUpgrade() {
+        try { localStorage.setItem('mm_coinUpgrade', coinUpgradeLevel.toString()); } catch (e) {}
+    }
+
+    function loadCoinUpgrade() {
+        try { coinUpgradeLevel = parseInt(localStorage.getItem('mm_coinUpgrade') || '0', 10); } catch (e) { coinUpgradeLevel = 0; }
     }
 
     function startGame() {
@@ -73,6 +101,7 @@ const Game = (() => {
         coinAccumulator = 0;
         bonusAdCooldown = 0;
         freeSummonTimer = FREE_SUMMON_INTERVAL;
+        adBoostTimer = 0;
 
         Grid.init();
         Particles.clear();
@@ -218,6 +247,14 @@ const Game = (() => {
                 watchBonusCoinAd();
                 return;
             }
+            if (UI.hitTestCoinUpgradeButton(x, y)) {
+                handleCoinUpgrade();
+                return;
+            }
+            if (UI.hitTestSpeedBoostButton(x, y) && adBoostTimer <= 0) {
+                watchSpeedBoostAd();
+                return;
+            }
             if (UI.hitTestMuteButton(x, y)) {
                 Sound.setMuted(!Sound.isMuted());
                 return;
@@ -238,8 +275,8 @@ const Game = (() => {
     }
 
     function getBonusCoinAmount() {
-        // Bonus = 60 seconds worth of coin production, minimum 50 coins
-        const cps = Grid.getTotalCoinsPerSecond();
+        // Bonus = 60 seconds worth of coin production (with multiplier), minimum 50 coins
+        const cps = Grid.getTotalCoinsPerSecond() * getTotalCoinMultiplier();
         return Math.max(50, Math.floor(cps * 60));
     }
 
@@ -252,6 +289,46 @@ const Game = (() => {
             Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
             Sound.milestone();
         });
+    }
+
+    function handleCoinUpgrade() {
+        if (coinUpgradeLevel >= UPGRADE_COSTS.length) return;
+        const cost = UPGRADE_COSTS[coinUpgradeLevel];
+        if (coins < cost) return;
+        coins -= cost;
+        coinUpgradeLevel++;
+        saveCoinUpgrade();
+        const mult = UPGRADE_MULTIPLIERS[coinUpgradeLevel];
+        UI.showMilestone(`SPEED UP! x${mult.toFixed(1)}`);
+        Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+        Sound.milestone();
+    }
+
+    function watchSpeedBoostAd() {
+        Ads.showReward(() => {
+            adBoostTimer = AD_BOOST_DURATION;
+            UI.showMilestone('COIN x2 BOOST! 60s');
+            Sound.milestone();
+        });
+    }
+
+    function getCoinSpeedInfo() {
+        const nextCost = coinUpgradeLevel < UPGRADE_COSTS.length ? UPGRADE_COSTS[coinUpgradeLevel] : null;
+        const canUpgrade = nextCost !== null && coins >= nextCost;
+        const currentMult = getTotalCoinMultiplier();
+        const nextMult = coinUpgradeLevel < UPGRADE_MULTIPLIERS.length - 1
+            ? UPGRADE_MULTIPLIERS[coinUpgradeLevel + 1] : null;
+        return {
+            level: coinUpgradeLevel,
+            maxLevel: UPGRADE_COSTS.length,
+            nextCost,
+            canUpgrade,
+            currentMult,
+            nextMult,
+            adBoostActive: adBoostTimer > 0,
+            adBoostLeft: adBoostTimer,
+            stageBonus: getStageMultiplier(),
+        };
     }
 
     function watchRewardAd() {
@@ -337,8 +414,9 @@ const Game = (() => {
         }
 
         if (state === STATE_PLAYING) {
-            // Generate coins
-            const cps = Grid.getTotalCoinsPerSecond();
+            // Generate coins (with multiplier)
+            const baseCps = Grid.getTotalCoinsPerSecond();
+            const cps = baseCps * getTotalCoinMultiplier();
             coinAccumulator += cps * dt;
             coinSoundTimer -= dt;
             if (coinAccumulator >= 1) {
@@ -371,6 +449,12 @@ const Game = (() => {
                 }
             }
 
+            // Ad boost timer
+            if (adBoostTimer > 0) {
+                adBoostTimer -= dt;
+                if (adBoostTimer < 0) adBoostTimer = 0;
+            }
+
             // Free summon timer
             if (freeSummonTimer > 0) {
                 freeSummonTimer -= dt;
@@ -394,7 +478,8 @@ const Game = (() => {
                 ready: freeSummonTimer <= 0 && !Grid.isFull(),
                 cooldownLeft: freeSummonTimer,
             };
-            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo);
+            const coinSpeedInfo = getCoinSpeedInfo();
+            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo);
 
             Particles.update(dt);
             Particles.draw(ctx);

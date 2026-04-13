@@ -7,6 +7,8 @@ const UI = (() => {
     let summonButton = { x: 0, y: 0, w: 0, h: 0 };
     let freeSummonButton = { x: 0, y: 0, w: 0, h: 0 };
     let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
+    let coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
+    let speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
     let muteButton = { x: 0, y: 0, w: 0, h: 0 };
@@ -113,7 +115,7 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo) {
         ctx.save();
 
         // Top bar background
@@ -141,12 +143,18 @@ const UI = (() => {
         ctx.font = `bold ${15}px Arial, sans-serif`;
         ctx.fillText(formatNumber(score), w - 18, hudY + 8);
 
-        // Coins per second (center)
+        // Coins per second (center) with multiplier
         ctx.textAlign = 'center';
         ctx.font = `${11}px Arial, sans-serif`;
-        ctx.fillStyle = '#999';
-        const cps = Grid.getTotalCoinsPerSecond();
-        ctx.fillText(`+${cps.toFixed(1)}/s`, w / 2, hudY);
+        const mult = coinSpeedInfo ? coinSpeedInfo.currentMult : 1;
+        const cps = Grid.getTotalCoinsPerSecond() * mult;
+        if (mult > 1) {
+            ctx.fillStyle = coinSpeedInfo && coinSpeedInfo.adBoostActive ? '#FF6B6B' : '#4CAF50';
+            ctx.fillText(`+${cps.toFixed(1)}/s (x${mult.toFixed(1)})`, w / 2, hudY);
+        } else {
+            ctx.fillStyle = '#999';
+            ctx.fillText(`+${cps.toFixed(1)}/s`, w / 2, hudY);
+        }
 
         ctx.restore();
 
@@ -158,6 +166,9 @@ const UI = (() => {
 
         // Bonus coin ad button
         drawBonusCoinButton(ctx, w, h, bonusCoinInfo);
+
+        // Coin speed buttons (upgrade + ad boost)
+        drawCoinSpeedButtons(ctx, w, h, coinSpeedInfo);
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
@@ -218,6 +229,82 @@ const UI = (() => {
         ctx.font = `${13}px Arial, sans-serif`;
         ctx.fillStyle = canSummon ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
         ctx.fillText(`🪙 ${formatNumber(cost)}`, w / 2, btnY + btnH / 2 + 12);
+
+        ctx.restore();
+    }
+
+    function drawCoinSpeedButtons(ctx, w, h, info) {
+        if (!info) {
+            coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
+            speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const baseY = layout.gridY + layout.gridSize + 170;
+        const btnH = 34;
+        const gap = 6;
+
+        ctx.save();
+
+        // Upgrade button (left)
+        const ubW = w * 0.46;
+        const ubX = 8;
+        coinUpgradeButton = { x: ubX, y: baseY, w: ubW, h: btnH };
+
+        if (info.level < info.maxLevel) {
+            const canBuy = info.canUpgrade;
+            ctx.fillStyle = canBuy ? '#8B5CF6' : '#888';
+            ctx.globalAlpha = canBuy ? 1 : 0.5;
+            Renderer.drawRoundRect(ctx, ubX, baseY, ubW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            ctx.fillText(`⬆ SPEED Lv.${info.level + 1}`, ubX + ubW / 2, baseY + btnH / 2 - 6);
+            ctx.font = `${10}px Arial, sans-serif`;
+            ctx.fillStyle = canBuy ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
+            ctx.fillText(`🪙 ${formatNumber(info.nextCost)}`, ubX + ubW / 2, baseY + btnH / 2 + 7);
+        } else {
+            ctx.fillStyle = '#8B5CF6';
+            Renderer.drawRoundRect(ctx, ubX, baseY, ubW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            ctx.fillText('⬆ SPEED MAX!', ubX + ubW / 2, baseY + btnH / 2);
+        }
+
+        // Speed boost ad button (right)
+        const sbW = w * 0.46;
+        const sbX = w - sbW - 8;
+        speedBoostButton = { x: sbX, y: baseY, w: sbW, h: btnH };
+
+        if (info.adBoostActive) {
+            // Active boost - show timer
+            ctx.fillStyle = '#FF6B6B';
+            Renderer.drawRoundRect(ctx, sbX, baseY, sbW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${12}px Arial, sans-serif`;
+            ctx.fillText(`🔥 x2 BOOST ${Math.ceil(info.adBoostLeft)}s`, sbX + sbW / 2, baseY + btnH / 2);
+        } else {
+            // Available
+            ctx.fillStyle = '#FF8800';
+            Renderer.drawRoundRect(ctx, sbX, baseY, sbW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            ctx.fillText('📺 x2 BOOST 60s', sbX + sbW / 2, baseY + btnH / 2);
+        }
 
         ctx.restore();
     }
@@ -443,7 +530,7 @@ const UI = (() => {
         // Draw stage info panel on the right side of the grid area
         const layout = Renderer.getGridLayout();
         const panelX = 8;
-        const panelY = layout.gridY + layout.gridSize + 170;
+        const panelY = layout.gridY + layout.gridSize + 212;
         const panelW = w - 16;
         const panelH = 92;
 
@@ -650,6 +737,14 @@ const UI = (() => {
         return hitRect(bonusCoinButton, x, y);
     }
 
+    function hitTestCoinUpgradeButton(x, y) {
+        return hitRect(coinUpgradeButton, x, y);
+    }
+
+    function hitTestSpeedBoostButton(x, y) {
+        return hitRect(speedBoostButton, x, y);
+    }
+
     function hitTestMuteButton(x, y) {
         return hitRect(muteButton, x, y);
     }
@@ -679,6 +774,8 @@ const UI = (() => {
         hitTestSummonButton,
         hitTestFreeSummonButton,
         hitTestBonusCoinButton,
+        hitTestCoinUpgradeButton,
+        hitTestSpeedBoostButton,
         hitTestRestartButton,
         hitTestRewardButton,
         hitTestMuteButton,
