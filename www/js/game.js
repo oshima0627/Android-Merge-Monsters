@@ -53,7 +53,7 @@ const Game = (() => {
 
     // Milestone tracking
     const MILESTONES = [5, 8, 10, 12, 15];
-    const MILESTONE_BONUS = { 5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000 };
+    // Milestone bonus = 50 summons worth of coins (calculated dynamically)
     let reachedMilestones = new Set();
 
     // Tutorial
@@ -324,12 +324,7 @@ const Game = (() => {
     }
 
     function getBonusCoinAmount() {
-        // Bonus = enough coins to summon ~50 monsters from current summon count
-        let total = 0;
-        for (let i = 0; i < 50; i++) {
-            total += Monster.summonCost(summonCount + i);
-        }
-        return Math.floor(total);
+        return getSummonCostForN(50);
     }
 
     function watchBonusCoinAd() {
@@ -419,13 +414,21 @@ const Game = (() => {
         stageClearTimer = 0;
     }
 
+    function getSummonCostForN(n) {
+        let total = 0;
+        for (let i = 0; i < n; i++) {
+            total += Monster.summonCost(summonCount + i);
+        }
+        return Math.floor(total);
+    }
+
     function checkMilestones(level) {
         for (const ms of MILESTONES) {
             if (level >= ms && !reachedMilestones.has(ms)) {
                 reachedMilestones.add(ms);
-                const bonus = MILESTONE_BONUS[ms] || 0;
+                const bonus = getSummonCostForN(50);
                 coins += bonus;
-                UI.showMilestone(`NEW! Lv.${ms}${bonus > 0 ? ` +${bonus} coins!` : ''}`);
+                UI.showMilestone(`NEW! Lv.${ms} +${bonus} coins!`);
                 Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
                 Sound.milestone();
             }
