@@ -51,10 +51,7 @@ const Game = (() => {
         return upgrade * adBoost * stage;
     }
 
-    // Milestone tracking
-    const MILESTONES = [5, 8, 10, 12, 15];
-    // Milestone bonus = 50 summons worth of coins (calculated dynamically)
-    let reachedMilestones = new Set();
+    // (Milestones replaced by per-level-up rewards)
 
     // Tutorial
     let showTutorial = false;
@@ -105,7 +102,6 @@ const Game = (() => {
         highestLevel = 0;
         isNewRecord = false;
         hasRewardAvailable = true;
-        reachedMilestones = new Set();
         coinAccumulator = 0;
         bonusAdCooldown = 0;
         freeSummonTimer = 0;
@@ -159,10 +155,15 @@ const Game = (() => {
         mergeCount++;
         score = mergeCount * Math.max(highestLevel, result.level);
 
-        // Update highest level
+        // Update highest level - reward 50 summons worth of coins
         if (result.level > highestLevel) {
             highestLevel = result.level;
             score = mergeCount * highestLevel;
+            const bonus = getSummonCostForN(50);
+            coins += bonus;
+            UI.showMilestone(`NEW Lv.${highestLevel}! +${bonus} coins!`);
+            Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+            Sound.milestone();
         }
 
         // Merge animation + particles
@@ -170,9 +171,6 @@ const Game = (() => {
         Renderer.addMergeAnimation(result.row, result.col, result.level);
         Particles.spawnMergeExplosion(pos.x, pos.y, result.level);
         Sound.merge();
-
-        // Check milestones
-        checkMilestones(result.level);
 
         // Stage progress
         Stages.onMerge();
@@ -420,19 +418,6 @@ const Game = (() => {
             total += Monster.summonCost(summonCount + i);
         }
         return Math.floor(total);
-    }
-
-    function checkMilestones(level) {
-        for (const ms of MILESTONES) {
-            if (level >= ms && !reachedMilestones.has(ms)) {
-                reachedMilestones.add(ms);
-                const bonus = getSummonCostForN(50);
-                coins += bonus;
-                UI.showMilestone(`NEW! Lv.${ms} +${bonus} coins!`);
-                Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
-                Sound.milestone();
-            }
-        }
     }
 
     function triggerGameOver() {
