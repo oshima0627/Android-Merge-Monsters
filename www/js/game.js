@@ -33,16 +33,20 @@ const Game = (() => {
     const UPGRADE_COSTS = [50, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000];
     const UPGRADE_MULTIPLIERS = [1.0, 1.2, 1.4, 1.7, 2.0, 2.5, 3.0, 3.8, 4.8, 6.0, 8.0];
     let coinUpgradeLevel = 0;
-    // 2) Ad boost (temporary 2x for 60 seconds)
+    // 2) Ad boost (temporary, scales with upgrade level)
     const AD_BOOST_DURATION = 60;
+    const AD_BOOST_MULTIPLIERS = [2.0, 2.2, 2.5, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0];
     let adBoostTimer = 0;
+    function getAdBoostMultiplier() {
+        return AD_BOOST_MULTIPLIERS[coinUpgradeLevel] || AD_BOOST_MULTIPLIERS[AD_BOOST_MULTIPLIERS.length - 1];
+    }
     // 3) Stage bonus (auto-increases with stage)
     function getStageMultiplier() {
         return 1 + (Stages.getStageNumber() - 1) * 0.1;
     }
     function getTotalCoinMultiplier() {
         const upgrade = UPGRADE_MULTIPLIERS[coinUpgradeLevel] || UPGRADE_MULTIPLIERS[UPGRADE_MULTIPLIERS.length - 1];
-        const adBoost = adBoostTimer > 0 ? 2.0 : 1.0;
+        const adBoost = adBoostTimer > 0 ? getAdBoostMultiplier() : 1.0;
         const stage = getStageMultiplier();
         return upgrade * adBoost * stage;
     }
@@ -308,9 +312,10 @@ const Game = (() => {
     }
 
     function watchSpeedBoostAd() {
+        const boostMult = getAdBoostMultiplier();
         Ads.showReward(() => {
             adBoostTimer = AD_BOOST_DURATION;
-            UI.showMilestone('COIN x2 BOOST! 60s');
+            UI.showMilestone(`COIN x${boostMult.toFixed(1)} BOOST! 60s`);
             Sound.milestone();
         });
     }
@@ -318,6 +323,7 @@ const Game = (() => {
     function getCoinSpeedInfo() {
         const nextCost = coinUpgradeLevel < UPGRADE_COSTS.length ? UPGRADE_COSTS[coinUpgradeLevel] : null;
         const canUpgrade = nextCost !== null && coins >= nextCost;
+        const adBoostMult = getAdBoostMultiplier();
         const currentMult = getTotalCoinMultiplier();
         const nextMult = coinUpgradeLevel < UPGRADE_MULTIPLIERS.length - 1
             ? UPGRADE_MULTIPLIERS[coinUpgradeLevel + 1] : null;
@@ -330,6 +336,7 @@ const Game = (() => {
             nextMult,
             adBoostActive: adBoostTimer > 0,
             adBoostLeft: adBoostTimer,
+            adBoostMult,
             stageBonus: getStageMultiplier(),
         };
     }

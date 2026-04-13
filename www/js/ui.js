@@ -293,7 +293,8 @@ const UI = (() => {
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${12}px Arial, sans-serif`;
-            ctx.fillText(`🔥 x2 BOOST ${Math.ceil(info.adBoostLeft)}s`, sbX + sbW / 2, baseY + btnH / 2);
+            const bm = info.adBoostMult || 2;
+            ctx.fillText(`🔥 x${bm.toFixed(1)} BOOST ${Math.ceil(info.adBoostLeft)}s`, sbX + sbW / 2, baseY + btnH / 2);
         } else {
             // Available
             ctx.fillStyle = '#FF8800';
@@ -303,7 +304,8 @@ const UI = (() => {
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${11}px Arial, sans-serif`;
-            ctx.fillText('📺 x2 BOOST 60s', sbX + sbW / 2, baseY + btnH / 2);
+            const bm = info.adBoostMult || 2;
+            ctx.fillText(`📺 x${bm.toFixed(1)} BOOST 60s`, sbX + sbW / 2, baseY + btnH / 2);
         }
 
         ctx.restore();
