@@ -20,6 +20,10 @@ const Game = (() => {
     let coinAccumulator = 0;
     let coinSoundTimer = 0;
 
+    // Bonus coin ad cooldown (seconds)
+    const BONUS_AD_COOLDOWN = 60;
+    let bonusAdCooldown = 0;
+
     // Milestone tracking
     const MILESTONES = [5, 8, 10, 12, 15];
     const MILESTONE_BONUS = { 5: 100, 8: 500, 10: 2000, 12: 8000, 15: 50000 };
@@ -58,6 +62,7 @@ const Game = (() => {
         hasRewardAvailable = true;
         reachedMilestones = new Set();
         coinAccumulator = 0;
+        bonusAdCooldown = 0;
 
         Grid.init();
         Particles.clear();
@@ -173,6 +178,10 @@ const Game = (() => {
                 handleSummon();
                 return;
             }
+            if (UI.hitTestBonusCoinButton(x, y) && bonusAdCooldown <= 0) {
+                watchBonusCoinAd();
+                return;
+            }
             if (UI.hitTestMuteButton(x, y)) {
                 Sound.setMuted(!Sound.isMuted());
                 return;
@@ -190,6 +199,23 @@ const Game = (() => {
                 return;
             }
         }
+    }
+
+    function getBonusCoinAmount() {
+        // Bonus = 60 seconds worth of coin production, minimum 50 coins
+        const cps = Grid.getTotalCoinsPerSecond();
+        return Math.max(50, Math.floor(cps * 60));
+    }
+
+    function watchBonusCoinAd() {
+        const bonus = getBonusCoinAmount();
+        Ads.showReward(() => {
+            coins += bonus;
+            bonusAdCooldown = BONUS_AD_COOLDOWN;
+            UI.showMilestone(`+${bonus} coins!`);
+            Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+            Sound.milestone();
+        });
     }
 
     function watchRewardAd() {
@@ -275,6 +301,12 @@ const Game = (() => {
                 }
             }
 
+            // Bonus ad cooldown
+            if (bonusAdCooldown > 0) {
+                bonusAdCooldown -= dt;
+                if (bonusAdCooldown < 0) bonusAdCooldown = 0;
+            }
+
             // Draw
             Renderer.drawBackground(timestamp);
             Renderer.updateAnimations(dt);
@@ -283,7 +315,12 @@ const Game = (() => {
 
             const cost = Monster.summonCost(summonCount);
             const canSummon = coins >= cost && !Grid.isFull();
-            UI.drawHUD(ctx, w, h, coins, score, cost, canSummon);
+            const bonusCoinInfo = {
+                available: bonusAdCooldown <= 0,
+                cooldownLeft: bonusAdCooldown,
+                bonusAmount: getBonusCoinAmount(),
+            };
+            UI.drawHUD(ctx, w, h, coins, score, cost, canSummon, bonusCoinInfo);
 
             Particles.update(dt);
             Particles.draw(ctx);

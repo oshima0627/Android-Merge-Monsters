@@ -5,6 +5,7 @@ const UI = (() => {
     // Button rectangles for hit testing
     let startButton = { x: 0, y: 0, w: 0, h: 0 };
     let summonButton = { x: 0, y: 0, w: 0, h: 0 };
+    let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
     let muteButton = { x: 0, y: 0, w: 0, h: 0 };
@@ -111,7 +112,7 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo) {
         ctx.save();
 
         // Top bar background
@@ -150,6 +151,9 @@ const UI = (() => {
 
         // Summon button
         drawSummonButton(ctx, w, h, summonCost, canSummon);
+
+        // Bonus coin ad button
+        drawBonusCoinButton(ctx, w, h, bonusCoinInfo);
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
@@ -210,6 +214,66 @@ const UI = (() => {
         ctx.font = `${13}px Arial, sans-serif`;
         ctx.fillStyle = canSummon ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
         ctx.fillText(`🪙 ${formatNumber(cost)}`, w / 2, btnY + btnH / 2 + 12);
+
+        ctx.restore();
+    }
+
+    function drawBonusCoinButton(ctx, w, h, info) {
+        // info = { available, cooldownLeft, bonusAmount }
+        if (!info) {
+            bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const btnW = w * 0.55;
+        const btnH = 42;
+        const btnX = (w - btnW) / 2;
+        const btnY = layout.gridY + layout.gridSize + 82;
+        bonusCoinButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.save();
+
+        if (info.available) {
+            // Active state - golden button
+            ctx.shadowColor = 'rgba(255,184,0,0.3)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 3;
+            ctx.fillStyle = '#FFB800';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+
+            // Highlight
+            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
+            grad.addColorStop(0, 'rgba(255,255,255,0.3)');
+            grad.addColorStop(0.5, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad;
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+
+            // Text
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+            ctx.fillText(`📺 AD: +${formatNumber(info.bonusAmount)} coins`, w / 2, btnY + btnH / 2);
+        } else {
+            // Cooldown state - greyed out with timer
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#999';
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = `bold ${13}px Arial, sans-serif`;
+            const secs = Math.ceil(info.cooldownLeft);
+            ctx.fillText(`📺 AD (${secs}s)`, w / 2, btnY + btnH / 2);
+        }
 
         ctx.restore();
     }
@@ -408,6 +472,10 @@ const UI = (() => {
         return hitRect(rewardButton, x, y);
     }
 
+    function hitTestBonusCoinButton(x, y) {
+        return hitRect(bonusCoinButton, x, y);
+    }
+
     function hitTestMuteButton(x, y) {
         return hitRect(muteButton, x, y);
     }
@@ -433,6 +501,7 @@ const UI = (() => {
         updateOverlays,
         hitTestStartButton,
         hitTestSummonButton,
+        hitTestBonusCoinButton,
         hitTestRestartButton,
         hitTestRewardButton,
         hitTestMuteButton,
