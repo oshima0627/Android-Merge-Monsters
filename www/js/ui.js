@@ -158,17 +158,14 @@ const UI = (() => {
 
         ctx.restore();
 
-        // Summon button
-        drawSummonButton(ctx, w, h, summonCost, canSummon);
+        // Summon button (includes free summon indicator)
+        drawSummonButton(ctx, w, h, summonCost, canSummon, freeSummonInfo);
 
-        // Free summon button
-        drawFreeSummonButton(ctx, w, h, freeSummonInfo);
+        // Ad row: bonus coins (left) + speed boost (right)
+        drawAdRow(ctx, w, h, bonusCoinInfo, coinSpeedInfo);
 
-        // Bonus coin ad button
-        drawBonusCoinButton(ctx, w, h, bonusCoinInfo);
-
-        // Coin speed buttons (upgrade + ad boost)
-        drawCoinSpeedButtons(ctx, w, h, coinSpeedInfo);
+        // Speed upgrade (compact, below ad row)
+        drawSpeedUpgrade(ctx, w, h, coinSpeedInfo);
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
@@ -186,77 +183,161 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawSummonButton(ctx, w, h, cost, canSummon) {
+    function drawSummonButton(ctx, w, h, cost, canSummon, freeInfo) {
         const layout = Renderer.getGridLayout();
-        const btnW = w * 0.65;
+        const freeReady = freeInfo && freeInfo.ready;
+
+        // Main summon button (left 60%)
+        const mainW = w * 0.52;
         const btnH = 54;
-        const btnX = (w - btnW) / 2;
+        const mainX = 8;
         const btnY = layout.gridY + layout.gridSize + 20;
-        summonButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+        summonButton = { x: mainX, y: btnY, w: mainW, h: btnH };
 
         ctx.save();
-
         const baseColor = canSummon ? '#4CAF50' : '#999';
-        const alpha = canSummon ? 1.0 : 0.6;
-        ctx.globalAlpha = alpha;
-
-        // Button shadow
+        ctx.globalAlpha = canSummon ? 1.0 : 0.6;
         ctx.shadowColor = canSummon ? 'rgba(76,175,80,0.3)' : 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetY = 3;
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
         ctx.fillStyle = baseColor;
-        Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+        Renderer.drawRoundRect(ctx, mainX, btnY, mainW, btnH, btnH / 2);
         ctx.fill();
         ctx.shadowBlur = 0;
         ctx.shadowOffsetY = 0;
-
-        // Button highlight
-        const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-        grad.addColorStop(0, 'rgba(255,255,255,0.25)');
-        grad.addColorStop(0.5, 'rgba(255,255,255,0)');
-        ctx.fillStyle = grad;
-        Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-        ctx.fill();
-
         ctx.globalAlpha = 1;
 
-        // Button text
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillStyle = '#fff';
-        ctx.font = `bold ${18}px 'Arial Rounded MT Bold', Arial, sans-serif`;
-        ctx.fillText('SUMMON', w / 2, btnY + btnH / 2 - 8);
-        ctx.font = `${13}px Arial, sans-serif`;
+        ctx.font = `bold ${16}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText('SUMMON', mainX + mainW / 2, btnY + btnH / 2 - 8);
+        ctx.font = `${12}px Arial, sans-serif`;
         ctx.fillStyle = canSummon ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
-        ctx.fillText(`🪙 ${formatNumber(cost)}`, w / 2, btnY + btnH / 2 + 12);
+        ctx.fillText(`🪙 ${formatNumber(cost)}`, mainX + mainW / 2, btnY + btnH / 2 + 11);
+        ctx.restore();
 
+        // Free summon button (right 35%)
+        const freeW = w - mainW - 24;
+        const freeX = mainX + mainW + 8;
+        freeSummonButton = { x: freeX, y: btnY, w: freeW, h: btnH };
+
+        ctx.save();
+        if (freeReady) {
+            ctx.shadowColor = 'rgba(68,136,255,0.4)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 2;
+            ctx.fillStyle = '#4488FF';
+        } else {
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#888';
+        }
+        Renderer.drawRoundRect(ctx, freeX, btnY, freeW, btnH, btnH / 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.globalAlpha = 1;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#fff';
+        if (freeReady) {
+            ctx.font = `bold ${13}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+            ctx.fillText('FREE!', freeX + freeW / 2, btnY + btnH / 2);
+        } else {
+            ctx.font = `bold ${12}px Arial, sans-serif`;
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            const secs = Math.ceil(freeInfo ? freeInfo.cooldownLeft : 0);
+            ctx.fillText(`FREE`, freeX + freeW / 2, btnY + btnH / 2 - 8);
+            ctx.font = `${11}px Arial, sans-serif`;
+            ctx.fillText(`${secs}s`, freeX + freeW / 2, btnY + btnH / 2 + 9);
+        }
         ctx.restore();
     }
 
-    function drawCoinSpeedButtons(ctx, w, h, info) {
+    function drawAdRow(ctx, w, h, coinInfo, speedInfo) {
+        const layout = Renderer.getGridLayout();
+        const rowY = layout.gridY + layout.gridSize + 82;
+        const btnH = 38;
+        const halfW = (w - 24) / 2;
+
+        // Left: bonus coin ad
+        const lcX = 8;
+        bonusCoinButton = { x: lcX, y: rowY, w: halfW, h: btnH };
+
+        ctx.save();
+        if (coinInfo && coinInfo.available) {
+            ctx.fillStyle = '#FFB800';
+            Renderer.drawRoundRect(ctx, lcX, rowY, halfW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            ctx.fillText(`📺 +${formatNumber(coinInfo.bonusAmount)}`, lcX + halfW / 2, rowY + btnH / 2);
+        } else {
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#999';
+            Renderer.drawRoundRect(ctx, lcX, rowY, halfW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            const secs = coinInfo ? Math.ceil(coinInfo.cooldownLeft) : 0;
+            ctx.fillText(`📺 coin (${secs}s)`, lcX + halfW / 2, rowY + btnH / 2);
+        }
+        ctx.restore();
+
+        // Right: speed boost ad
+        const rcX = lcX + halfW + 8;
+        speedBoostButton = { x: rcX, y: rowY, w: halfW, h: btnH };
+
+        ctx.save();
+        if (speedInfo && speedInfo.adBoostActive) {
+            ctx.fillStyle = '#FF6B6B';
+            Renderer.drawRoundRect(ctx, rcX, rowY, halfW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            const bm = speedInfo.adBoostMult || 1.5;
+            ctx.fillText(`🔥 x${bm.toFixed(1)} ${Math.ceil(speedInfo.adBoostLeft)}s`, rcX + halfW / 2, rowY + btnH / 2);
+        } else {
+            ctx.fillStyle = '#FF8800';
+            Renderer.drawRoundRect(ctx, rcX, rowY, halfW, btnH, btnH / 2);
+            ctx.fill();
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#fff';
+            ctx.font = `bold ${11}px Arial, sans-serif`;
+            const bm = speedInfo ? speedInfo.adBoostMult || 1.5 : 1.5;
+            ctx.fillText(`🚀 x${bm.toFixed(1)} boost`, rcX + halfW / 2, rowY + btnH / 2);
+        }
+        ctx.restore();
+    }
+
+    function drawSpeedUpgrade(ctx, w, h, info) {
         if (!info) {
             coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
-            speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
             return;
         }
 
         const layout = Renderer.getGridLayout();
-        const baseY = layout.gridY + layout.gridSize + 170;
-        const btnH = 34;
-        const gap = 6;
+        const btnW = w * 0.5;
+        const btnH = 32;
+        const btnX = (w - btnW) / 2;
+        const btnY = layout.gridY + layout.gridSize + 126;
+        coinUpgradeButton = { x: btnX, y: btnY, w: btnW, h: btnH };
 
         ctx.save();
-
-        // Upgrade button (left)
-        const ubW = w * 0.46;
-        const ubX = 8;
-        coinUpgradeButton = { x: ubX, y: baseY, w: ubW, h: btnH };
-
         if (info.level < info.maxLevel) {
             const canBuy = info.canUpgrade;
             ctx.fillStyle = canBuy ? '#8B5CF6' : '#888';
             ctx.globalAlpha = canBuy ? 1 : 0.5;
-            Renderer.drawRoundRect(ctx, ubX, baseY, ubW, btnH, btnH / 2);
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
             ctx.fill();
             ctx.globalAlpha = 1;
 
@@ -264,167 +345,19 @@ const UI = (() => {
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${11}px Arial, sans-serif`;
-            ctx.fillText(`⬆ SPEED Lv.${info.level + 1}`, ubX + ubW / 2, baseY + btnH / 2 - 6);
-            ctx.font = `${10}px Arial, sans-serif`;
-            ctx.fillStyle = canBuy ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.5)';
-            ctx.fillText(`🪙 ${formatNumber(info.nextCost)}`, ubX + ubW / 2, baseY + btnH / 2 + 7);
+            ctx.fillText(`⬆ SPEED Lv.${info.level + 1}  🪙${formatNumber(info.nextCost)}`, btnX + btnW / 2, btnY + btnH / 2);
         } else {
             ctx.fillStyle = '#8B5CF6';
-            Renderer.drawRoundRect(ctx, ubX, baseY, ubW, btnH, btnH / 2);
+            ctx.globalAlpha = 0.6;
+            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
             ctx.fill();
+            ctx.globalAlpha = 1;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillStyle = '#fff';
             ctx.font = `bold ${11}px Arial, sans-serif`;
-            ctx.fillText('⬆ SPEED MAX!', ubX + ubW / 2, baseY + btnH / 2);
+            ctx.fillText('⬆ SPEED MAX', btnX + btnW / 2, btnY + btnH / 2);
         }
-
-        // Speed boost ad button (right)
-        const sbW = w * 0.46;
-        const sbX = w - sbW - 8;
-        speedBoostButton = { x: sbX, y: baseY, w: sbW, h: btnH };
-
-        if (info.adBoostActive) {
-            // Active boost - show timer
-            ctx.fillStyle = '#FF6B6B';
-            Renderer.drawRoundRect(ctx, sbX, baseY, sbW, btnH, btnH / 2);
-            ctx.fill();
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${12}px Arial, sans-serif`;
-            const bm = info.adBoostMult || 2;
-            ctx.fillText(`🔥 x${bm.toFixed(1)} BOOST ${Math.ceil(info.adBoostLeft)}s`, sbX + sbW / 2, baseY + btnH / 2);
-        } else {
-            // Available
-            ctx.fillStyle = '#FF8800';
-            Renderer.drawRoundRect(ctx, sbX, baseY, sbW, btnH, btnH / 2);
-            ctx.fill();
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${11}px Arial, sans-serif`;
-            const bm = info.adBoostMult || 2;
-            ctx.fillText(`📺 x${bm.toFixed(1)} BOOST 60s`, sbX + sbW / 2, baseY + btnH / 2);
-        }
-
-        ctx.restore();
-    }
-
-    function drawFreeSummonButton(ctx, w, h, info) {
-        if (!info) {
-            freeSummonButton = { x: 0, y: 0, w: 0, h: 0 };
-            return;
-        }
-
-        const layout = Renderer.getGridLayout();
-        const btnW = w * 0.4;
-        const btnH = 38;
-        const btnX = (w - btnW) / 2;
-        const btnY = layout.gridY + layout.gridSize + 80;
-        freeSummonButton = { x: btnX, y: btnY, w: btnW, h: btnH };
-
-        ctx.save();
-
-        if (info.ready) {
-            // Ready - pulsing blue button
-            ctx.shadowColor = 'rgba(68,136,255,0.4)';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetY = 2;
-            ctx.fillStyle = '#4488FF';
-            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetY = 0;
-
-            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, 'rgba(255,255,255,0.3)');
-            grad.addColorStop(0.5, 'rgba(255,255,255,0)');
-            ctx.fillStyle = grad;
-            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-            ctx.fill();
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
-            ctx.fillText('FREE SUMMON!', w / 2, btnY + btnH / 2);
-        } else {
-            // Cooldown
-            ctx.globalAlpha = 0.35;
-            ctx.fillStyle = '#888';
-            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.font = `bold ${12}px Arial, sans-serif`;
-            const secs = Math.ceil(info.cooldownLeft);
-            ctx.fillText(`FREE (${secs}s)`, w / 2, btnY + btnH / 2);
-        }
-
-        ctx.restore();
-    }
-
-    function drawBonusCoinButton(ctx, w, h, info) {
-        // info = { available, cooldownLeft, bonusAmount }
-        if (!info) {
-            bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
-            return;
-        }
-
-        const layout = Renderer.getGridLayout();
-        const btnW = w * 0.55;
-        const btnH = 42;
-        const btnX = (w - btnW) / 2;
-        const btnY = layout.gridY + layout.gridSize + 126;
-        bonusCoinButton = { x: btnX, y: btnY, w: btnW, h: btnH };
-
-        ctx.save();
-
-        if (info.available) {
-            // Active state - golden button
-            ctx.shadowColor = 'rgba(255,184,0,0.3)';
-            ctx.shadowBlur = 10;
-            ctx.shadowOffsetY = 3;
-            ctx.fillStyle = '#FFB800';
-            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetY = 0;
-
-            // Highlight
-            const grad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-            grad.addColorStop(0, 'rgba(255,255,255,0.3)');
-            grad.addColorStop(0.5, 'rgba(255,255,255,0)');
-            ctx.fillStyle = grad;
-            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-            ctx.fill();
-
-            // Text
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
-            ctx.fillText(`📺 AD: +${formatNumber(info.bonusAmount)} coins`, w / 2, btnY + btnH / 2);
-        } else {
-            // Cooldown state - greyed out with timer
-            ctx.globalAlpha = 0.4;
-            ctx.fillStyle = '#999';
-            Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-            ctx.fill();
-            ctx.globalAlpha = 1;
-
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = 'rgba(255,255,255,0.7)';
-            ctx.font = `bold ${13}px Arial, sans-serif`;
-            const secs = Math.ceil(info.cooldownLeft);
-            ctx.fillText(`📺 AD (${secs}s)`, w / 2, btnY + btnH / 2);
-        }
-
         ctx.restore();
     }
 
@@ -532,7 +465,7 @@ const UI = (() => {
         // Draw stage info panel on the right side of the grid area
         const layout = Renderer.getGridLayout();
         const panelX = 8;
-        const panelY = layout.gridY + layout.gridSize + 212;
+        const panelY = layout.gridY + layout.gridSize + 164;
         const panelW = w - 16;
         const panelH = 92;
 
@@ -633,6 +566,60 @@ const UI = (() => {
         ctx.fillStyle = '#4CAF50';
         ctx.font = `bold ${w * 0.04}px Arial, sans-serif`;
         ctx.fillText(`+${formatNumber(results.reward)} coins!`, w / 2, panelY + panelH * 0.82);
+
+        ctx.restore();
+    }
+
+    function drawTutorial(ctx, w, h, step) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const messages = [
+            { title: 'ドラッグ＆ドロップ', desc: 'モンスターを指でドラッグして\n移動させよう！' },
+            { title: '同じレベルで合体！', desc: '同じレベル同士を重ねると\n進化するよ！' },
+            { title: '召喚でモンスター追加', desc: '下のボタンでモンスターを\n召喚しよう！' },
+        ];
+        const msg = messages[step];
+
+        // Panel
+        const pw = w * 0.75;
+        const ph = h * 0.22;
+        const px = (w - pw) / 2;
+        const py = h * 0.35;
+
+        ctx.fillStyle = '#fff';
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 15;
+        Renderer.drawRoundRect(ctx, px, py, pw, ph, 16);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Step indicator
+        ctx.fillStyle = '#FF6B6B';
+        ctx.font = `bold ${w * 0.04}px Arial, sans-serif`;
+        ctx.fillText(`${step + 1} / 3`, w / 2, py + ph * 0.15);
+
+        // Title
+        ctx.fillStyle = '#333';
+        ctx.font = `bold ${w * 0.055}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText(msg.title, w / 2, py + ph * 0.38);
+
+        // Description (multiline)
+        ctx.fillStyle = '#666';
+        ctx.font = `${w * 0.038}px Arial, sans-serif`;
+        const lines = msg.desc.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], w / 2, py + ph * 0.6 + i * w * 0.05);
+        }
+
+        // Tap to continue
+        ctx.fillStyle = '#999';
+        ctx.font = `${w * 0.03}px Arial, sans-serif`;
+        ctx.fillText('タップで次へ', w / 2, py + ph * 0.92);
 
         ctx.restore();
     }
@@ -769,6 +756,7 @@ const UI = (() => {
         drawOverlays,
         drawStageInfo,
         drawStageClear,
+        drawTutorial,
         showMilestone,
         showNewRecord,
         updateOverlays,

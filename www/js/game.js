@@ -30,12 +30,12 @@ const Game = (() => {
 
     // Coin speed system
     // 1) Permanent upgrade (purchased with coins)
-    const UPGRADE_COSTS = [30, 80, 200, 500, 1200, 2500, 5000, 10000, 20000, 50000];
-    const UPGRADE_MULTIPLIERS = [1.0, 1.2, 1.4, 1.7, 2.0, 2.5, 3.0, 3.8, 4.8, 6.0, 8.0];
+    const UPGRADE_COSTS = [30, 100, 300, 800, 2000];
+    const UPGRADE_MULTIPLIERS = [1.0, 1.3, 1.6, 2.0, 2.5, 3.0];
     let coinUpgradeLevel = 0;
     // 2) Ad boost (temporary, scales with upgrade level)
     const AD_BOOST_DURATION = 60;
-    const AD_BOOST_MULTIPLIERS = [2.0, 2.2, 2.5, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0];
+    const AD_BOOST_MULTIPLIERS = [1.5, 1.8, 2.0, 2.3, 2.5, 3.0];
     let adBoostTimer = 0;
     function getAdBoostMultiplier() {
         return AD_BOOST_MULTIPLIERS[coinUpgradeLevel] || AD_BOOST_MULTIPLIERS[AD_BOOST_MULTIPLIERS.length - 1];
@@ -55,6 +55,10 @@ const Game = (() => {
     const MILESTONES = [5, 8, 10, 12, 15];
     const MILESTONE_BONUS = { 5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000 };
     let reachedMilestones = new Set();
+
+    // Tutorial
+    let showTutorial = false;
+    let tutorialStep = 0; // 0: drag, 1: merge, 2: summon
 
     // Last frame time
     let lastTime = 0;
@@ -94,7 +98,7 @@ const Game = (() => {
 
     function startGame() {
         state = STATE_PLAYING;
-        coins = 30;
+        coins = 80;
         score = 0;
         mergeCount = 0;
         summonCount = 0;
@@ -104,7 +108,7 @@ const Game = (() => {
         reachedMilestones = new Set();
         coinAccumulator = 0;
         bonusAdCooldown = 0;
-        freeSummonTimer = FREE_SUMMON_INTERVAL;
+        freeSummonTimer = 0;
         adBoostTimer = 0;
         coinUpgradeLevel = 0;
         saveCoinUpgrade();
@@ -125,9 +129,25 @@ const Game = (() => {
         Stages.init();
         Stages.loadStageProg();
 
+        // Show tutorial on first ever play
+        try {
+            if (!localStorage.getItem('mm_tutorialDone')) {
+                showTutorial = true;
+                tutorialStep = 0;
+            }
+        } catch (e) {}
+
         Ads.showBanner();
         Sound.resume();
         Sound.buttonTap();
+    }
+
+    function dismissTutorial() {
+        tutorialStep++;
+        if (tutorialStep >= 3) {
+            showTutorial = false;
+            try { localStorage.setItem('mm_tutorialDone', '1'); } catch (e) {}
+        }
     }
 
     function handleMerge(srcRow, srcCol, dstRow, dstCol) {
@@ -260,6 +280,10 @@ const Game = (() => {
         }
 
         if (state === STATE_PLAYING) {
+            if (showTutorial) {
+                dismissTutorial();
+                return;
+            }
             if (UI.hitTestSummonButton(x, y)) {
                 handleSummon();
                 return;
@@ -277,7 +301,7 @@ const Game = (() => {
                 return;
             }
             if (UI.hitTestSpeedBoostButton(x, y) && adBoostTimer <= 0) {
-                watchSpeedBoostAd();
+                activateSpeedBoost();
                 return;
             }
             if (UI.hitTestMuteButton(x, y)) {
@@ -287,7 +311,7 @@ const Game = (() => {
         }
 
         if (state === STATE_GAMEOVER) {
-            if (UI.hitTestRewardButton(x, y) && hasRewardAvailable) {
+            if (UI.hitTestRewardButton(x, y)) {
                 watchRewardAd();
                 return;
             }
@@ -300,9 +324,9 @@ const Game = (() => {
     }
 
     function getBonusCoinAmount() {
-        // Bonus = enough coins to summon ~20 monsters from current summon count
+        // Bonus = enough coins to summon ~50 monsters from current summon count
         let total = 0;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 50; i++) {
             total += Monster.summonCost(summonCount + i);
         }
         return Math.floor(total);
@@ -332,13 +356,12 @@ const Game = (() => {
         Sound.milestone();
     }
 
-    function watchSpeedBoostAd() {
+    function activateSpeedBoost() {
+        if (adBoostTimer > 0) return;
         const boostMult = getAdBoostMultiplier();
-        Ads.showReward(() => {
-            adBoostTimer = AD_BOOST_DURATION;
-            UI.showMilestone(`COIN x${boostMult.toFixed(1)} BOOST! 60s`);
-            Sound.milestone();
-        });
+        adBoostTimer = AD_BOOST_DURATION;
+        UI.showMilestone(`COIN x${boostMult.toFixed(1)} BOOST! 60s`);
+        Sound.milestone();
     }
 
     function getCoinSpeedInfo() {
@@ -364,10 +387,9 @@ const Game = (() => {
 
     function watchRewardAd() {
         Ads.showReward(() => {
-            // Reward: remove 2 lowest monsters
+            // Reward: remove 2 lowest monsters (repeatable)
             const removed = Grid.removeLowestTwo();
             if (removed > 0) {
-                hasRewardAvailable = false;
                 state = STATE_PLAYING;
                 Sound.summon();
             }
@@ -542,6 +564,11 @@ const Game = (() => {
                 }
             }
 
+            // Tutorial overlay
+            if (showTutorial) {
+                UI.drawTutorial(ctx, w, h, tutorialStep);
+            }
+
             // Banner ad space (bottom 60px)
             if (Ads.isBannerShowing()) {
                 ctx.fillStyle = 'rgba(0,0,0,0.05)';
@@ -560,7 +587,7 @@ const Game = (() => {
             Particles.update(dt);
             Particles.draw(ctx);
 
-            UI.drawGameOver(ctx, w, h, score, highestLevel, highScore, isNewRecord, hasRewardAvailable);
+            UI.drawGameOver(ctx, w, h, score, highestLevel, highScore, isNewRecord, true);
         }
 
         requestAnimationFrame(update);
