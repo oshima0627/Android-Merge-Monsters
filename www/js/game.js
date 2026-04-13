@@ -275,9 +275,12 @@ const Game = (() => {
     }
 
     function getBonusCoinAmount() {
-        // Bonus = 60 seconds worth of coin production (with multiplier), minimum 50 coins
-        const cps = Grid.getTotalCoinsPerSecond() * getTotalCoinMultiplier();
-        return Math.max(50, Math.floor(cps * 60));
+        // Bonus = enough coins to summon ~20 monsters from current summon count
+        let total = 0;
+        for (let i = 0; i < 20; i++) {
+            total += Monster.summonCost(summonCount + i);
+        }
+        return Math.floor(total);
     }
 
     function watchBonusCoinAd() {
