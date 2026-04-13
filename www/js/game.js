@@ -106,6 +106,8 @@ const Game = (() => {
         bonusAdCooldown = 0;
         freeSummonTimer = FREE_SUMMON_INTERVAL;
         adBoostTimer = 0;
+        coinUpgradeLevel = 0;
+        saveCoinUpgrade();
 
         Grid.init();
         Particles.clear();
