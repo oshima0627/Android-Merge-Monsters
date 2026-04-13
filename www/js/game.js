@@ -30,12 +30,12 @@ const Game = (() => {
 
     // Coin speed system
     // 1) Permanent upgrade (purchased with coins)
-    const UPGRADE_COSTS = [30, 80, 200, 500, 1200, 2500, 5000, 10000, 20000, 50000];
-    const UPGRADE_MULTIPLIERS = [1.0, 1.2, 1.4, 1.7, 2.0, 2.5, 3.0, 3.8, 4.8, 6.0, 8.0];
+    const UPGRADE_COSTS = [30, 100, 300, 800, 2000];
+    const UPGRADE_MULTIPLIERS = [1.0, 1.3, 1.6, 2.0, 2.5, 3.0];
     let coinUpgradeLevel = 0;
     // 2) Ad boost (temporary, scales with upgrade level)
     const AD_BOOST_DURATION = 60;
-    const AD_BOOST_MULTIPLIERS = [2.0, 2.2, 2.5, 2.8, 3.0, 3.5, 4.0, 5.0, 6.0, 8.0, 10.0];
+    const AD_BOOST_MULTIPLIERS = [1.5, 1.8, 2.0, 2.3, 2.5, 3.0];
     let adBoostTimer = 0;
     function getAdBoostMultiplier() {
         return AD_BOOST_MULTIPLIERS[coinUpgradeLevel] || AD_BOOST_MULTIPLIERS[AD_BOOST_MULTIPLIERS.length - 1];
@@ -300,9 +300,9 @@ const Game = (() => {
     }
 
     function getBonusCoinAmount() {
-        // Bonus = enough coins to summon ~20 monsters from current summon count
+        // Bonus = enough coins to summon ~50 monsters from current summon count
         let total = 0;
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < 50; i++) {
             total += Monster.summonCost(summonCount + i);
         }
         return Math.floor(total);
