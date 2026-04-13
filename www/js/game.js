@@ -30,7 +30,7 @@ const Game = (() => {
 
     // Coin speed system
     // 1) Permanent upgrade (purchased with coins)
-    const UPGRADE_COSTS = [50, 150, 400, 1000, 2500, 6000, 15000, 40000, 100000, 250000];
+    const UPGRADE_COSTS = [30, 80, 200, 500, 1200, 2500, 5000, 10000, 20000, 50000];
     const UPGRADE_MULTIPLIERS = [1.0, 1.2, 1.4, 1.7, 2.0, 2.5, 3.0, 3.8, 4.8, 6.0, 8.0];
     let coinUpgradeLevel = 0;
     // 2) Ad boost (temporary, scales with upgrade level)
@@ -53,7 +53,7 @@ const Game = (() => {
 
     // Milestone tracking
     const MILESTONES = [5, 8, 10, 12, 15];
-    const MILESTONE_BONUS = { 5: 100, 8: 500, 10: 2000, 12: 8000, 15: 50000 };
+    const MILESTONE_BONUS = { 5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000 };
     let reachedMilestones = new Set();
 
     // Last frame time

@@ -17,10 +17,10 @@ const Stages = (() => {
             main: { type: 'reach_level', value: 2, label: 'Lv.2モンスターを作ろう' },
             missions: [
                 { type: 'merge_count', value: 3, label: '3回合体しよう' },
-                { type: 'hold_coins', value: 50, label: 'コインを50枚貯めよう' },
+                { type: 'hold_coins', value: 30, label: 'コインを30枚貯めよう' },
                 { type: 'summon_count', value: 5, label: '5体召喚しよう' },
             ],
-            reward: 30,
+            reward: 20,
         },
         {
             id: 2,
@@ -29,9 +29,9 @@ const Stages = (() => {
             missions: [
                 { type: 'merge_count', value: 8, label: '8回合体しよう' },
                 { type: 'monsters_at_level', value: 2, level: 2, label: 'Lv.2を2体同時に持とう' },
-                { type: 'hold_coins', value: 100, label: 'コインを100枚貯めよう' },
+                { type: 'hold_coins', value: 60, label: 'コインを60枚貯めよう' },
             ],
-            reward: 50,
+            reward: 40,
         },
         {
             id: 3,
@@ -39,10 +39,10 @@ const Stages = (() => {
             main: { type: 'reach_level', value: 4, label: 'Lv.4モンスターを作ろう' },
             missions: [
                 { type: 'merge_count', value: 15, label: '15回合体しよう' },
-                { type: 'hold_coins', value: 200, label: 'コインを200枚貯めよう' },
+                { type: 'hold_coins', value: 100, label: 'コインを100枚貯めよう' },
                 { type: 'monsters_at_level', value: 3, level: 2, label: 'Lv.2以上を3体持とう' },
             ],
-            reward: 80,
+            reward: 60,
         },
         {
             id: 4,
@@ -51,20 +51,20 @@ const Stages = (() => {
             missions: [
                 { type: 'monsters_at_level', value: 3, level: 3, label: 'Lv.3以上を3体持とう' },
                 { type: 'merge_count', value: 25, label: '25回合体しよう' },
-                { type: 'hold_coins', value: 400, label: 'コインを400枚貯めよう' },
+                { type: 'hold_coins', value: 200, label: 'コインを200枚貯めよう' },
             ],
-            reward: 150,
+            reward: 100,
         },
         {
             id: 5,
             name: 'ドヤ顔の誘惑',
             main: { type: 'reach_level', value: 6, label: 'Lv.6モンスターを作ろう' },
             missions: [
-                { type: 'hold_coins', value: 500, label: 'コインを500枚貯めよう' },
+                { type: 'hold_coins', value: 300, label: 'コインを300枚貯めよう' },
                 { type: 'merge_count', value: 40, label: '40回合体しよう' },
                 { type: 'monsters_at_level', value: 2, level: 4, label: 'Lv.4以上を2体持とう' },
             ],
-            reward: 300,
+            reward: 200,
         },
         {
             id: 6,
@@ -72,10 +72,10 @@ const Stages = (() => {
             main: { type: 'reach_level', value: 7, label: 'Lv.7モンスターを作ろう' },
             missions: [
                 { type: 'monsters_at_level', value: 2, level: 5, label: 'Lv.5以上を2体持とう' },
-                { type: 'hold_coins', value: 1000, label: 'コインを1000枚貯めよう' },
+                { type: 'hold_coins', value: 500, label: 'コインを500枚貯めよう' },
                 { type: 'merge_count', value: 55, label: '55回合体しよう' },
             ],
-            reward: 500,
+            reward: 350,
         },
         {
             id: 7,
@@ -84,20 +84,20 @@ const Stages = (() => {
             missions: [
                 { type: 'merge_count', value: 70, label: '70回合体しよう' },
                 { type: 'monsters_at_level', value: 4, level: 4, label: 'Lv.4以上を4体持とう' },
-                { type: 'hold_coins', value: 2000, label: 'コインを2000枚貯めよう' },
+                { type: 'hold_coins', value: 800, label: 'コインを800枚貯めよう' },
             ],
-            reward: 800,
+            reward: 500,
         },
         {
             id: 8,
             name: '黄金の輝き',
             main: { type: 'reach_level', value: 9, label: 'Lv.9モンスターを作ろう' },
             missions: [
-                { type: 'hold_coins', value: 3000, label: 'コインを3000枚貯めよう' },
+                { type: 'hold_coins', value: 1200, label: 'コインを1200枚貯めよう' },
                 { type: 'merge_count', value: 90, label: '90回合体しよう' },
                 { type: 'monsters_at_level', value: 3, level: 5, label: 'Lv.5以上を3体持とう' },
             ],
-            reward: 1500,
+            reward: 800,
         },
         {
             id: 9,
@@ -105,10 +105,10 @@ const Stages = (() => {
             main: { type: 'reach_level', value: 10, label: 'Lv.10モンスターを作ろう' },
             missions: [
                 { type: 'monsters_at_level', value: 3, level: 6, label: 'Lv.6以上を3体持とう' },
-                { type: 'hold_coins', value: 5000, label: 'コインを5000枚貯めよう' },
+                { type: 'hold_coins', value: 2000, label: 'コインを2000枚貯めよう' },
                 { type: 'merge_count', value: 110, label: '110回合体しよう' },
             ],
-            reward: 3000,
+            reward: 1500,
         },
         {
             id: 10,
@@ -117,9 +117,9 @@ const Stages = (() => {
             missions: [
                 { type: 'merge_count', value: 150, label: '150回合体しよう' },
                 { type: 'monsters_at_level', value: 2, level: 9, label: 'Lv.9以上を2体持とう' },
-                { type: 'hold_coins', value: 10000, label: 'コインを10000枚貯めよう' },
+                { type: 'hold_coins', value: 4000, label: 'コインを4000枚貯めよう' },
             ],
-            reward: 8000,
+            reward: 3000,
         },
         {
             id: 11,
@@ -128,9 +128,9 @@ const Stages = (() => {
             missions: [
                 { type: 'monsters_at_level', value: 5, level: 8, label: 'Lv.8以上を5体持とう' },
                 { type: 'merge_count', value: 200, label: '200回合体しよう' },
-                { type: 'hold_coins', value: 30000, label: 'コインを30000枚貯めよう' },
+                { type: 'hold_coins', value: 8000, label: 'コインを8000枚貯めよう' },
             ],
-            reward: 50000,
+            reward: 10000,
         },
     ];
 
