@@ -36,6 +36,10 @@ const Game = (() => {
     // Last frame time
     let lastTime = 0;
 
+    // Stage clear overlay timer
+    let stageClearTimer = 0;
+    const STAGE_CLEAR_DURATION = 3.0;
+
     function loadSave() {
         try {
             highScore = parseInt(localStorage.getItem('mm_highScore') || '0', 10);
@@ -44,6 +48,7 @@ const Game = (() => {
             highScore = 0;
             bestLevel = 0;
         }
+        Stages.loadStageProg();
     }
 
     function saveBest() {
@@ -81,6 +86,10 @@ const Game = (() => {
             }
         }
 
+        stageClearTimer = 0;
+        Stages.init();
+        Stages.loadStageProg();
+
         Ads.showBanner();
         Sound.resume();
         Sound.buttonTap();
@@ -109,6 +118,10 @@ const Game = (() => {
 
         // Check milestones
         checkMilestones(result.level);
+
+        // Stage progress
+        Stages.onMerge();
+        checkStageProgress();
 
         // Check high score
         if (score > highScore) {
@@ -251,6 +264,29 @@ const Game = (() => {
         });
     }
 
+    function getGameState() {
+        return { highestLevel, coins, mergeCount };
+    }
+
+    function checkStageProgress() {
+        if (Stages.isAllCleared() || Stages.isStageCleared()) return;
+        Stages.checkProgress(getGameState());
+        if (Stages.isStageCleared()) {
+            const results = Stages.getStageResults();
+            coins += results.reward;
+            stageClearTimer = STAGE_CLEAR_DURATION;
+            Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
+            Sound.milestone();
+            Stages.saveStageProg();
+        }
+    }
+
+    function advanceToNextStage() {
+        Stages.advanceStage();
+        Stages.saveStageProg();
+        stageClearTimer = 0;
+    }
+
     function checkMilestones(level) {
         for (const ms of MILESTONES) {
             if (level >= ms && !reachedMilestones.has(ms)) {
@@ -362,6 +398,31 @@ const Game = (() => {
             Particles.draw(ctx);
             UI.updateOverlays(dt);
             UI.drawOverlays(ctx, w, h, timestamp);
+
+            // Stage mission display
+            if (!Stages.isAllCleared()) {
+                const missionStatus = Stages.getMissionStatus(getGameState());
+                if (missionStatus) {
+                    UI.drawStageInfo(ctx, w, h, missionStatus);
+                }
+            }
+
+            // Check stage progress for coin-based missions
+            if (!Stages.isStageCleared()) {
+                checkStageProgress();
+            }
+
+            // Stage clear overlay
+            if (stageClearTimer > 0) {
+                stageClearTimer -= dt;
+                const results = Stages.getStageResults();
+                if (results) {
+                    UI.drawStageClear(ctx, w, h, results, 1 - (stageClearTimer / STAGE_CLEAR_DURATION));
+                }
+                if (stageClearTimer <= 0) {
+                    advanceToNextStage();
+                }
+            }
 
             // Banner ad space (bottom 60px)
             if (Ads.isBannerShowing()) {

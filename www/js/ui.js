@@ -439,6 +439,115 @@ const UI = (() => {
         ctx.restore();
     }
 
+    function drawStageInfo(ctx, w, h, status) {
+        // Draw stage info panel on the right side of the grid area
+        const layout = Renderer.getGridLayout();
+        const panelX = 8;
+        const panelY = layout.gridY + layout.gridSize + 170;
+        const panelW = w - 16;
+        const panelH = 80;
+
+        ctx.save();
+
+        // Background
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        Renderer.drawRoundRect(ctx, panelX, panelY, panelW, panelH, 10);
+        ctx.fill();
+
+        // Stage title
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#FF6B6B';
+        ctx.font = `bold ${12}px Arial, sans-serif`;
+        ctx.fillText(`STAGE ${status.stageId} - ${status.stageName}`, panelX + 10, panelY + 14);
+
+        // Main goal
+        const mainCheck = status.mainDone ? '✅' : '⬜';
+        ctx.fillStyle = status.mainDone ? '#4CAF50' : '#333';
+        ctx.font = `bold ${11}px Arial, sans-serif`;
+        ctx.fillText(`${mainCheck} ${status.mainLabel}`, panelX + 10, panelY + 32);
+
+        // Bonus missions
+        for (let i = 0; i < status.missions.length; i++) {
+            const m = status.missions[i];
+            const check = m.done ? '✅' : '⬜';
+            ctx.fillStyle = m.done ? '#4CAF50' : '#888';
+            ctx.font = `${10}px Arial, sans-serif`;
+            ctx.fillText(`${check} ${m.label}`, panelX + 10, panelY + 50 + i * 15);
+        }
+
+        // Stars preview
+        ctx.textAlign = 'right';
+        ctx.font = `${14}px Arial`;
+        const mainStar = status.mainDone ? '★' : '☆';
+        const s1 = status.missions[0].done ? '★' : '☆';
+        const s2 = status.missions[1].done ? '★' : '☆';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(`${mainStar}${s1}${s2}`, panelX + panelW - 10, panelY + 14);
+
+        ctx.restore();
+    }
+
+    function drawStageClear(ctx, w, h, results, progress) {
+        ctx.save();
+
+        // Fade in
+        const alpha = Math.min(1, progress * 3);
+        ctx.globalAlpha = alpha;
+
+        // Semi-transparent overlay
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.fillRect(0, 0, w, h);
+
+        // Panel
+        const panelW = w * 0.78;
+        const panelH = h * 0.32;
+        const panelX = (w - panelW) / 2;
+        const panelY = (h - panelH) / 2 - h * 0.05;
+
+        // Bounce in
+        const scale = progress < 0.15 ? (progress / 0.15) * 1.1 : progress < 0.25 ? 1.1 - (progress - 0.15) / 0.1 * 0.1 : 1.0;
+        ctx.translate(w / 2, h / 2 - h * 0.05);
+        ctx.scale(scale, scale);
+        ctx.translate(-w / 2, -(h / 2 - h * 0.05));
+
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = '#fff';
+        Renderer.drawRoundRect(ctx, panelX, panelY, panelW, panelH, 16);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // "STAGE CLEAR!"
+        ctx.fillStyle = '#FF6B6B';
+        ctx.font = `bold ${w * 0.065}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText('STAGE CLEAR!', w / 2, panelY + panelH * 0.18);
+
+        // Stage name
+        ctx.fillStyle = '#666';
+        ctx.font = `${w * 0.035}px Arial, sans-serif`;
+        ctx.fillText(`Stage ${results.stageId} - ${results.stageName}`, w / 2, panelY + panelH * 0.38);
+
+        // Stars
+        ctx.font = `${w * 0.09}px Arial`;
+        let starsText = '';
+        for (let i = 0; i < 3; i++) {
+            starsText += i < results.stars ? '★' : '☆';
+        }
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText(starsText, w / 2, panelY + panelH * 0.6);
+
+        // Reward
+        ctx.fillStyle = '#4CAF50';
+        ctx.font = `bold ${w * 0.04}px Arial, sans-serif`;
+        ctx.fillText(`+${formatNumber(results.reward)} coins!`, w / 2, panelY + panelH * 0.82);
+
+        ctx.restore();
+    }
+
     function showMilestone(text) {
         milestoneText = { text: text, progress: 0, duration: 2.0 };
     }
@@ -561,6 +670,8 @@ const UI = (() => {
         drawSummonButton,
         drawGameOver,
         drawOverlays,
+        drawStageInfo,
+        drawStageClear,
         showMilestone,
         showNewRecord,
         updateOverlays,
