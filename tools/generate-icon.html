@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Merge Monsters - Icon Generator</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        canvas { border: 1px solid #ccc; display: block; margin: 10px 0; }
+        .row { display: flex; flex-wrap: wrap; gap: 16px; }
+        .item { text-align: center; }
+        button { padding: 10px 24px; background: #FF6B6B; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 8px 4px; }
+        button:hover { background: #e55; }
+        h1 { color: #FF6B6B; }
+        p { color: #666; }
+    </style>
+</head>
+<body>
+    <h1>Merge Monsters Icon Generator</h1>
+    <p>Click buttons to download each icon. Use the 512x512 for Play Store and the others for Android app icons.</p>
+
+    <div>
+        <button onclick="downloadIcon(512)">Download 512x512 (Play Store)</button>
+        <button onclick="downloadIcon(192)">Download 192x192 (xxxhdpi)</button>
+        <button onclick="downloadIcon(144)">Download 144x144 (xxhdpi)</button>
+        <button onclick="downloadIcon(96)">Download 96x96 (xhdpi)</button>
+        <button onclick="downloadIcon(72)">Download 72x72 (hdpi)</button>
+        <button onclick="downloadIcon(48)">Download 48x48 (mdpi)</button>
+        <button onclick="downloadFeature()">Download Feature Graphic (1024x500)</button>
+    </div>
+
+    <h2>Preview</h2>
+    <div class="row">
+        <div class="item">
+            <canvas id="preview512" width="512" height="512"></canvas>
+            <div>512x512</div>
+        </div>
+        <div class="item">
+            <canvas id="previewFeature" width="1024" height="500"></canvas>
+            <div>1024x500 Feature Graphic</div>
+        </div>
+    </div>
+
+    <script>
+    function drawIcon(canvas, size) {
+        const ctx = canvas.getContext('2d');
+        const s = size;
+        const cx = s / 2;
+        const cy = s / 2;
+        const r = s * 0.36;
+
+        // Background - rounded square with gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, s, s);
+        bgGrad.addColorStop(0, '#B8E6FF');
+        bgGrad.addColorStop(1, '#E8D0FF');
+        ctx.fillStyle = bgGrad;
+        roundRect(ctx, 0, 0, s, s, s * 0.18);
+        ctx.fill();
+
+        // Subtle pattern dots
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const dx = s * 0.08 + i * s * 0.12;
+                const dy = s * 0.08 + j * s * 0.12;
+                ctx.beginPath();
+                ctx.arc(dx, dy, s * 0.015, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + r * 0.9, r * 0.75, r * 0.18, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Monster body
+        const bodyGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        bodyGrad.addColorStop(0, '#FF9999');
+        bodyGrad.addColorStop(0.5, '#FF6B6B');
+        bodyGrad.addColorStop(1, '#E54545');
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body highlight
+        const hlGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, 0, cx, cy, r);
+        hlGrad.addColorStop(0, 'rgba(255,255,255,0.45)');
+        hlGrad.addColorStop(0.4, 'rgba(255,255,255,0.1)');
+        hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = hlGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body outline
+        ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+        ctx.lineWidth = s * 0.005;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Arms
+        ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+        ctx.lineWidth = r * 0.12;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - r * 0.88, cy + r * 0.1);
+        ctx.lineTo(cx - r * 1.15, cy - r * 0.15);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + r * 0.88, cy + r * 0.1);
+        ctx.lineTo(cx + r * 1.15, cy - r * 0.15);
+        ctx.stroke();
+
+        // Feet
+        ctx.fillStyle = 'rgba(0,0,0,0.12)';
+        ctx.beginPath();
+        ctx.ellipse(cx - r * 0.32, cy + r * 0.88, r * 0.18, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + r * 0.32, cy + r * 0.88, r * 0.18, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crown
+        const crownY = cy - r * 0.85;
+        const crownSize = r * 0.5;
+        ctx.fillStyle = '#FFD700';
+        ctx.strokeStyle = '#CC9900';
+        ctx.lineWidth = s * 0.003;
+        ctx.beginPath();
+        ctx.moveTo(cx - crownSize, crownY);
+        ctx.lineTo(cx - crownSize * 0.65, crownY - crownSize * 0.85);
+        ctx.lineTo(cx - crownSize * 0.3, crownY - crownSize * 0.2);
+        ctx.lineTo(cx, crownY - crownSize * 1.05);
+        ctx.lineTo(cx + crownSize * 0.3, crownY - crownSize * 0.2);
+        ctx.lineTo(cx + crownSize * 0.65, crownY - crownSize * 0.85);
+        ctx.lineTo(cx + crownSize, crownY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Crown jewels
+        ctx.fillStyle = '#FF4444';
+        ctx.beginPath();
+        ctx.arc(cx, crownY - crownSize * 0.7, crownSize * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#4488FF';
+        ctx.beginPath();
+        ctx.arc(cx - crownSize * 0.45, crownY - crownSize * 0.35, crownSize * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + crownSize * 0.45, crownY - crownSize * 0.35, crownSize * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes - sparkle style
+        const eyeY = cy - r * 0.15;
+        const eyeSpacing = r * 0.3;
+        const eyeR = r * 0.15;
+        drawStar(ctx, cx - eyeSpacing, eyeY, eyeR * 0.45, eyeR * 1.1, 4, '#FFD700');
+        drawStar(ctx, cx + eyeSpacing, eyeY, eyeR * 0.45, eyeR * 1.1, 4, '#FFD700');
+
+        // Mouth - happy smile
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = r * 0.06;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.15, r * 0.22, 0.1 * Math.PI, 0.9 * Math.PI);
+        ctx.stroke();
+
+        // Cheeks
+        ctx.fillStyle = 'rgba(255,150,150,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(cx - r * 0.5, cy + r * 0.15, r * 0.15, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + r * 0.5, cy + r * 0.15, r * 0.15, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // "M" text at bottom of body
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = s * 0.008;
+        ctx.font = `bold ${r * 0.5}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText('M', cx, cy + r * 0.45);
+        ctx.fillText('M', cx, cy + r * 0.45);
+    }
+
+    function drawFeatureGraphic(canvas) {
+        const ctx = canvas.getContext('2d');
+        const w = 1024;
+        const h = 500;
+
+        // Background gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+        bgGrad.addColorStop(0, '#B8E6FF');
+        bgGrad.addColorStop(0.5, '#D8D0FF');
+        bgGrad.addColorStop(1, '#FFD0E8');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Dots pattern
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        for (let i = 0; i < 30; i++) {
+            for (let j = 0; j < 15; j++) {
+                ctx.beginPath();
+                ctx.arc(20 + i * 34, 20 + j * 34, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Draw small monsters in background
+        const monsterColors = ['#88DDFF', '#66DD88', '#FFDD44', '#BB66FF', '#FF88BB'];
+        const positions = [
+            { x: 120, y: 120, r: 40, c: 0 },
+            { x: 900, y: 100, r: 35, c: 1 },
+            { x: 80, y: 380, r: 30, c: 2 },
+            { x: 940, y: 400, r: 38, c: 3 },
+            { x: 200, y: 300, r: 25, c: 4 },
+            { x: 830, y: 280, r: 28, c: 0 },
+        ];
+        for (const p of positions) {
+            ctx.save();
+            ctx.globalAlpha = 0.25;
+            ctx.fillStyle = monsterColors[p.c];
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            // Simple eyes
+            ctx.fillStyle = '#333';
+            ctx.globalAlpha = 0.2;
+            ctx.beginPath();
+            ctx.arc(p.x - p.r * 0.25, p.y - p.r * 0.15, p.r * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(p.x + p.r * 0.25, p.y - p.r * 0.15, p.r * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Main monster (center-left)
+        const mainCanvas = document.createElement('canvas');
+        mainCanvas.width = 260;
+        mainCanvas.height = 260;
+        drawIcon(mainCanvas, 260);
+        ctx.drawImage(mainCanvas, 100, 120);
+
+        // Title text
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
+        ctx.font = "bold 72px 'Arial Rounded MT Bold', Arial, sans-serif";
+        ctx.fillText('MERGE', 620, 182);
+        ctx.fillText('MONSTERS', 620, 272);
+
+        // Main text
+        ctx.fillStyle = '#FF6B6B';
+        ctx.fillText('MERGE', 620, 180);
+        ctx.fillStyle = '#6B88FF';
+        ctx.fillText('MONSTERS', 620, 270);
+
+        // Subtitle
+        ctx.font = "bold 26px Arial, sans-serif";
+        ctx.fillStyle = '#666';
+        ctx.fillText('Merge, Evolve, Conquer!', 620, 340);
+
+        // Stars decoration
+        const starPositions = [
+            { x: 420, y: 160 }, { x: 820, y: 140 },
+            { x: 450, y: 320 }, { x: 790, y: 300 },
+        ];
+        for (const sp of starPositions) {
+            drawStar(ctx, sp.x, sp.y, 5, 12, 4, '#FFD700');
+        }
+    }
+
+    function drawStar(ctx, cx, cy, innerR, outerR, points, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        for (let i = 0; i < points * 2; i++) {
+            const angle = (i * Math.PI) / points - Math.PI / 2;
+            const rad = i % 2 === 0 ? outerR : innerR;
+            if (i === 0) ctx.moveTo(cx + Math.cos(angle) * rad, cy + Math.sin(angle) * rad);
+            else ctx.lineTo(cx + Math.cos(angle) * rad, cy + Math.sin(angle) * rad);
+        }
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+
+    function downloadIcon(size) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        drawIcon(canvas, size);
+        downloadCanvas(canvas, `icon-${size}x${size}.png`);
+    }
+
+    function downloadFeature() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 500;
+        drawFeatureGraphic(canvas);
+        downloadCanvas(canvas, 'feature-graphic-1024x500.png');
+    }
+
+    function downloadCanvas(canvas, filename) {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    // Draw previews on load
+    window.onload = () => {
+        drawIcon(document.getElementById('preview512'), 512);
+        drawFeatureGraphic(document.getElementById('previewFeature'));
+    };
+    </script>
+</body>
+</html>
