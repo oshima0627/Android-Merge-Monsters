@@ -42,6 +42,44 @@ const Monster = (() => {
 
     const RAINBOW_COLORS = ['#FF6B6B', '#FFAA33', '#FFDD44', '#66DD88', '#88DDFF', '#4488FF', '#BB66FF'];
 
+    // Per-level name and short lore for the monster codex.
+    const LORE = {
+        1:  { name: 'ポポ',       desc: '青空の子。合体旅のはじまり。' },
+        2:  { name: 'リーフィ',   desc: '若草のそよ風、はじめての芽吹き。' },
+        3:  { name: 'タマゴン',   desc: '黄色いひよっこ、驚くのが得意。' },
+        4:  { name: 'オレンジー', desc: 'やる気いっぱいのお調子者。' },
+        5:  { name: 'クラウニー', desc: '小さな王冠を授かった若き戦士。' },
+        6:  { name: 'ムラサメ',   desc: '紫の霧を操る、頭脳派のモンスター。' },
+        7:  { name: 'ピンクル',   desc: '愛らしい微笑みで仲間を元気づける。' },
+        8:  { name: 'ブルーノ',   desc: '青き戦士、頼れる兄貴分。' },
+        9:  { name: 'ゴールドン', desc: '炎をまとう黄金の英雄。' },
+        10: { name: 'テルビス',   desc: '翡翠の光輪、静寂の守り手。' },
+        11: { name: 'レッドラ',   desc: '真紅の翼を広げ、戦場を駆ける。' },
+        12: { name: 'ロイヤ',     desc: '紫紺の王、王冠の宝石を継ぐ者。' },
+        13: { name: 'エメルダ',   desc: '緑玉の雷をまとう電撃使い。' },
+        14: { name: 'フラミナ',   desc: '燃える翼を持つ魔性の舞姫。' },
+        15: { name: 'コバルド',   desc: '蒼き究極の騎士、勇者の頂点。' },
+        16: { name: 'イグニス',   desc: '永遠に燃えゆく炎、星を纏う火精。' },
+        17: { name: 'マリナー',   desc: '深海と大空を繋ぐ蒼の守護者。' },
+        18: { name: 'ベリーナ',   desc: '夜空のベリー、王冠を戴く魔女。' },
+        19: { name: 'メドーウ',   desc: '草原の歌姫、星を呼び寄せる者。' },
+        20: { name: 'サンセッタ', desc: '夕焼けを閉じ込めた終章の炎。' },
+        21: { name: 'トワイラ',   desc: '黄昏の光、神の使いへ至る。' },
+        22: { name: 'オーレア',   desc: '黄金の神聖、祝福を纏いし者。' },
+        23: { name: 'アーギュラ', desc: '白銀の神聖、沈黙の守護者。' },
+        24: { name: 'アンバラ',   desc: '琥珀の宇宙、時を封じる者。' },
+        25: { name: 'アクアリス', desc: '深海の宇宙、蒼き神秘。' },
+        26: { name: 'ヴァイオラ', desc: '菫色の宇宙、魔眼を持つ。' },
+        27: { name: 'ローゼア',   desc: '薔薇色の宇宙、永遠の華。' },
+        28: { name: 'ヴォイディス', desc: '虚無の青、宇宙の淵に立つ者。' },
+        29: { name: 'ニグラム',   desc: '漆黒の神、すべてを呑む影。' },
+        30: { name: 'プリズモン', desc: '虹色の創造神、全てを超越せし者。' },
+    };
+
+    function getLore(level) {
+        return LORE[level] || { name: '???', desc: '???' };
+    }
+
     function getLevelData(level) {
         if (level < 1) level = 1;
         if (level > MAX_LEVEL) level = MAX_LEVEL;
@@ -698,7 +736,9 @@ const Monster = (() => {
     return {
         MAX_LEVEL,
         LEVEL_DATA,
+        LORE,
         getLevelData,
+        getLore,
         getGlowColor,
         coinsPerSecond,
         summonCost,

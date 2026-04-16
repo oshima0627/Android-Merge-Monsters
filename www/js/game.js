@@ -6,8 +6,13 @@ const Game = (() => {
     const STATE_TITLE = 'title';
     const STATE_PLAYING = 'playing';
     const STATE_GAMEOVER = 'gameover';
+    const STATE_CODEX = 'codex';
 
     let state = STATE_TITLE;
+    let codexReturnState = STATE_TITLE;
+    let codexPage = 0;
+    let seenLevels = new Set();
+    let pendingStageIntro = null; // { id, name, intro }
     let coins = 0;
     let score = 0;
     let mergeCount = 0;
@@ -92,9 +97,44 @@ const Game = (() => {
             highScore = 0;
             bestLevel = 0;
         }
+        loadSeenLevels();
         Stages.loadStageProg();
         loadCoinUpgrade();
         tryResumeSession();
+    }
+
+    function loadSeenLevels() {
+        try {
+            const raw = localStorage.getItem('mm_seenLevels');
+            if (raw) {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) seenLevels = new Set(arr.filter(n => typeof n === 'number'));
+            }
+        } catch (e) { seenLevels = new Set(); }
+    }
+
+    function saveSeenLevels() {
+        try {
+            localStorage.setItem('mm_seenLevels', JSON.stringify(Array.from(seenLevels)));
+        } catch (e) {}
+    }
+
+    function markLevelSeen(level) {
+        if (!level || seenLevels.has(level)) return;
+        seenLevels.add(level);
+        saveSeenLevels();
+    }
+
+    const CODEX_PER_PAGE = 6;
+    function getCodexPageCount() {
+        return Math.ceil(Monster.MAX_LEVEL / CODEX_PER_PAGE);
+    }
+
+    function openCodex(fromState) {
+        codexReturnState = fromState || STATE_TITLE;
+        codexPage = 0;
+        state = STATE_CODEX;
+        Sound.buttonTap();
     }
 
     function saveSession() {
@@ -168,6 +208,9 @@ const Game = (() => {
         Stages.restoreSnapshot(data.stages);
         Particles.clear();
 
+        // Make sure levels present on the restored grid are in the codex
+        Grid.getOccupiedCells().forEach(c => markLevelSeen(c.monster.level));
+
         state = STATE_PLAYING;
         Ads.showBanner();
         return true;
@@ -220,11 +263,13 @@ const Game = (() => {
                 Particles.spawnSummon(pos.x, pos.y);
             }
         }
+        markLevelSeen(1);
 
         stageClearTimer = 0;
         saveTimer = 0;
         Stages.init();
         Stages.loadStageProg();
+        pendingStageIntro = Stages.getCurrentIntro();
 
         // Show tutorial on first ever play
         try {
@@ -267,6 +312,7 @@ const Game = (() => {
         Renderer.addMergeAnimation(result.row, result.col, result.level);
         Particles.spawnMergeExplosion(pos.x, pos.y, result.level);
         Sound.merge();
+        markLevelSeen(result.level);
 
         // Check milestones
         checkMilestones(result.level);
@@ -351,6 +397,7 @@ const Game = (() => {
             Particles.spawnSummon(pos.x, pos.y);
             Renderer.addMergeAnimation(result.row, result.col, result.level);
             Sound.summon();
+            markLevelSeen(result.level);
         }
 
         Stages.onSummon();
@@ -364,9 +411,32 @@ const Game = (() => {
     function handleTap(x, y) {
         Sound.resume();
 
+        if (state === STATE_CODEX) {
+            if (UI.hitTestCodexBack(x, y)) {
+                state = codexReturnState;
+                Sound.buttonTap();
+                return;
+            }
+            if (UI.hitTestCodexPrev(x, y)) {
+                codexPage = Math.max(0, codexPage - 1);
+                Sound.buttonTap();
+                return;
+            }
+            if (UI.hitTestCodexNext(x, y)) {
+                codexPage = Math.min(getCodexPageCount() - 1, codexPage + 1);
+                Sound.buttonTap();
+                return;
+            }
+            return;
+        }
+
         if (state === STATE_TITLE) {
             if (UI.hitTestStartButton(x, y)) {
                 startGame();
+                return;
+            }
+            if (UI.hitTestCodexButton(x, y)) {
+                openCodex(STATE_TITLE);
                 return;
             }
             if (UI.hitTestMuteButton(x, y)) {
@@ -377,8 +447,18 @@ const Game = (() => {
         }
 
         if (state === STATE_PLAYING) {
+            // Dismiss stage intro overlay first
+            if (pendingStageIntro) {
+                pendingStageIntro = null;
+                Sound.buttonTap();
+                return;
+            }
             if (showTutorial) {
                 dismissTutorial();
+                return;
+            }
+            if (UI.hitTestCodexButton(x, y)) {
+                openCodex(STATE_PLAYING);
                 return;
             }
             if (UI.hitTestSummonButton(x, y)) {
@@ -412,6 +492,10 @@ const Game = (() => {
         }
 
         if (state === STATE_GAMEOVER) {
+            if (UI.hitTestCodexButton(x, y)) {
+                openCodex(STATE_GAMEOVER);
+                return;
+            }
             if (UI.hitTestRewardButton(x, y)) {
                 watchRewardAd();
                 return;
@@ -542,6 +626,7 @@ const Game = (() => {
         Stages.advanceStage();
         Stages.saveStageProg();
         stageClearTimer = 0;
+        pendingStageIntro = Stages.getCurrentIntro();
     }
 
     function checkMilestones(level) {
@@ -592,9 +677,14 @@ const Game = (() => {
             Particles.draw(ctx);
         }
 
+        if (state === STATE_CODEX) {
+            UI.drawCodex(ctx, w, h, timestamp, codexPage, getCodexPageCount(), seenLevels);
+        }
+
         if (state === STATE_PLAYING) {
             // Pause coin generation / sound effects while an ad is on screen
             const paused = (Ads.isAdPlaying && Ads.isAdPlaying()) ||
+                !!pendingStageIntro ||
                 (typeof document !== 'undefined' && document.visibilityState === 'hidden');
 
             if (!paused) {
@@ -700,6 +790,11 @@ const Game = (() => {
             // Tutorial overlay
             if (showTutorial) {
                 UI.drawTutorial(ctx, w, h, tutorialStep);
+            }
+
+            // Stage intro narrative overlay (shown once when entering a stage)
+            if (pendingStageIntro) {
+                UI.drawStageIntro(ctx, w, h, pendingStageIntro);
             }
 
             // Banner ad space (bottom 60px)
