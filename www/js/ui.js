@@ -18,6 +18,8 @@ const UI = (() => {
     let newRecordText = null;   // { progress, duration }
 
     function drawTitleScreen(ctx, w, h, time, highScore, highestLevel) {
+        const safeTop = Renderer.getSafeTop();
+
         // Background
         const bgHue = 190 + Math.sin(time * 0.0002) * 15;
         const grad = ctx.createLinearGradient(0, 0, 0, h);
@@ -103,7 +105,7 @@ const UI = (() => {
 
         // Mute button
         const muteSize = w * 0.08;
-        muteButton = { x: w - muteSize - 12, y: 12, w: muteSize, h: muteSize };
+        muteButton = { x: w - muteSize - 12, y: 12 + safeTop, w: muteSize, h: muteSize };
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.beginPath();
         ctx.arc(muteButton.x + muteSize / 2, muteButton.y + muteSize / 2, muteSize / 2, 0, Math.PI * 2);
@@ -118,13 +120,16 @@ const UI = (() => {
     function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo) {
         ctx.save();
 
+        const safeTop = Renderer.getSafeTop();
+        const hudTop = 6 + safeTop;
+
         // Top bar background
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        Renderer.drawRoundRect(ctx, 8, 6, w - 16, 42, 12);
+        Renderer.drawRoundRect(ctx, 8, hudTop, w - 16, 42, 12);
         ctx.fill();
 
         ctx.textBaseline = 'middle';
-        const hudY = 27;
+        const hudY = hudTop + 21;
 
         // Coins (left)
         ctx.textAlign = 'left';
@@ -169,7 +174,7 @@ const UI = (() => {
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
-        muteButton = { x: 8, y: 52, w: muteSize, h: muteSize };
+        muteButton = { x: 8, y: hudTop + 46, w: muteSize, h: muteSize };
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.beginPath();

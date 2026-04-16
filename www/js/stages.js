@@ -273,6 +273,29 @@ const Stages = (() => {
         }
     }
 
+    function getSnapshot() {
+        return {
+            currentStageIndex,
+            stageMergeCount,
+            stageSummonCount,
+            stageCleared,
+            stageResults,
+            completedMissions: completedMissions.slice(),
+        };
+    }
+
+    function restoreSnapshot(snap) {
+        if (!snap) return;
+        currentStageIndex = typeof snap.currentStageIndex === 'number' ? snap.currentStageIndex : 0;
+        stageMergeCount = typeof snap.stageMergeCount === 'number' ? snap.stageMergeCount : 0;
+        stageSummonCount = typeof snap.stageSummonCount === 'number' ? snap.stageSummonCount : 0;
+        stageCleared = !!snap.stageCleared;
+        stageResults = snap.stageResults || null;
+        completedMissions = Array.isArray(snap.completedMissions) && snap.completedMissions.length === 3
+            ? snap.completedMissions.map(Boolean)
+            : [false, false, false];
+    }
+
     return {
         STAGE_DATA,
         init,
@@ -289,5 +312,7 @@ const Stages = (() => {
         advanceStage,
         saveStageProg,
         loadStageProg,
+        getSnapshot,
+        restoreSnapshot,
     };
 })();

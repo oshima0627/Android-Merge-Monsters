@@ -67,6 +67,12 @@ const Game = (() => {
     let stageClearTimer = 0;
     const STAGE_CLEAR_DURATION = 3.0;
 
+    // Periodic session save
+    let saveTimer = 0;
+    const SAVE_INTERVAL = 2.0;
+
+    const SAVE_KEY = 'mm_session';
+
     function loadSave() {
         try {
             highScore = parseInt(localStorage.getItem('mm_highScore') || '0', 10);
@@ -77,6 +83,81 @@ const Game = (() => {
         }
         Stages.loadStageProg();
         loadCoinUpgrade();
+        tryResumeSession();
+    }
+
+    function saveSession() {
+        if (state !== STATE_PLAYING) return;
+        try {
+            const data = {
+                v: 1,
+                coins,
+                score,
+                mergeCount,
+                summonCount,
+                highestLevel,
+                isNewRecord,
+                hasRewardAvailable,
+                reachedMilestones: Array.from(reachedMilestones),
+                coinAccumulator,
+                bonusAdCooldown,
+                freeSummonTimer,
+                adBoostTimer,
+                coinUpgradeLevel,
+                stageClearTimer,
+                showTutorial,
+                tutorialStep,
+                grid: Grid.getCells(),
+                stages: Stages.getSnapshot(),
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        } catch (e) {}
+    }
+
+    function clearSession() {
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    }
+
+    function tryResumeSession() {
+        let data;
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return false;
+            data = JSON.parse(raw);
+        } catch (e) {
+            return false;
+        }
+        if (!data || data.v !== 1 || !data.grid) return false;
+
+        Grid.init();
+        if (!Grid.setCells(data.grid)) {
+            clearSession();
+            return false;
+        }
+
+        coins = Number(data.coins) || 0;
+        score = Number(data.score) || 0;
+        mergeCount = Number(data.mergeCount) || 0;
+        summonCount = Number(data.summonCount) || 0;
+        highestLevel = Number(data.highestLevel) || 0;
+        isNewRecord = !!data.isNewRecord;
+        hasRewardAvailable = data.hasRewardAvailable !== false;
+        reachedMilestones = new Set(Array.isArray(data.reachedMilestones) ? data.reachedMilestones : []);
+        coinAccumulator = Number(data.coinAccumulator) || 0;
+        bonusAdCooldown = Math.max(0, Number(data.bonusAdCooldown) || 0);
+        freeSummonTimer = Math.max(0, Number(data.freeSummonTimer) || 0);
+        adBoostTimer = Math.max(0, Number(data.adBoostTimer) || 0);
+        coinUpgradeLevel = Number(data.coinUpgradeLevel) || 0;
+        stageClearTimer = Math.max(0, Number(data.stageClearTimer) || 0);
+        showTutorial = !!data.showTutorial;
+        tutorialStep = Number(data.tutorialStep) || 0;
+
+        Stages.restoreSnapshot(data.stages);
+        Particles.clear();
+
+        state = STATE_PLAYING;
+        Ads.showBanner();
+        return true;
     }
 
     function saveBest() {
@@ -97,6 +178,7 @@ const Game = (() => {
     }
 
     function startGame() {
+        clearSession();
         state = STATE_PLAYING;
         coins = 80;
         score = 0;
@@ -126,6 +208,7 @@ const Game = (() => {
         }
 
         stageClearTimer = 0;
+        saveTimer = 0;
         Stages.init();
         Stages.loadStageProg();
 
@@ -434,6 +517,7 @@ const Game = (() => {
 
     function triggerGameOver() {
         state = STATE_GAMEOVER;
+        clearSession();
         hasRewardAvailable = true;
 
         // Final score
@@ -574,6 +658,13 @@ const Game = (() => {
                 ctx.fillStyle = 'rgba(0,0,0,0.05)';
                 ctx.fillRect(0, h - 60, w, 60);
             }
+
+            // Periodic session save
+            saveTimer += dt;
+            if (saveTimer >= SAVE_INTERVAL) {
+                saveTimer = 0;
+                saveSession();
+            }
         }
 
         if (state === STATE_GAMEOVER) {
@@ -599,6 +690,7 @@ const Game = (() => {
 
     return {
         loadSave,
+        saveSession,
         startGame,
         handleMerge,
         handleMove,

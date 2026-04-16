@@ -190,6 +190,25 @@ const Grid = (() => {
         return cells;
     }
 
+    function setCells(newCells) {
+        if (!Array.isArray(newCells) || newCells.length !== ROWS) return false;
+        const restored = [];
+        for (let r = 0; r < ROWS; r++) {
+            if (!Array.isArray(newCells[r]) || newCells[r].length !== COLS) return false;
+            restored[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                const cell = newCells[r][c];
+                if (cell && typeof cell.level === 'number' && cell.level >= 1) {
+                    restored[r][c] = { level: cell.level };
+                } else {
+                    restored[r][c] = null;
+                }
+            }
+        }
+        cells = restored;
+        return true;
+    }
+
     return {
         COLS,
         ROWS,
@@ -212,5 +231,6 @@ const Grid = (() => {
         getTotalCoinsPerSecond,
         getHighestLevel,
         getCells,
+        setCells,
     };
 })();
