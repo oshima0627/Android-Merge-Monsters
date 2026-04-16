@@ -231,14 +231,36 @@ const Stages = (() => {
         }
     }
 
+    function getMissionProgress(mission, gameState) {
+        switch (mission.type) {
+            case 'reach_level':
+                return { current: gameState.highestLevel, target: mission.value };
+            case 'merge_count':
+                return { current: stageMergeCount, target: mission.value };
+            case 'summon_count':
+                return { current: stageSummonCount, target: mission.value };
+            case 'hold_coins':
+                return { current: Math.floor(gameState.coins), target: mission.value };
+            case 'monsters_at_level': {
+                const occupied = Grid.getOccupiedCells();
+                const count = occupied.filter(c => c.monster.level >= mission.level).length;
+                return { current: count, target: mission.value };
+            }
+            default:
+                return null;
+        }
+    }
+
     function getMissionStatus(gameState) {
         const stage = getCurrentStage();
         if (!stage) return null;
 
         const mainDone = checkMission(stage.main, gameState);
+        const mainProgress = getMissionProgress(stage.main, gameState);
         const missions = stage.missions.map((m, i) => ({
             label: m.label,
             done: completedMissions[i] || checkMission(m, gameState),
+            progress: getMissionProgress(m, gameState),
         }));
 
         return {
@@ -246,6 +268,7 @@ const Stages = (() => {
             stageId: stage.id,
             mainLabel: stage.main.label,
             mainDone: mainDone,
+            mainProgress: mainProgress,
             missions: missions,
         };
     }

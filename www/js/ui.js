@@ -9,6 +9,7 @@ const UI = (() => {
     let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
     let coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
     let speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
+    let clearLowestButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
     let muteButton = { x: 0, y: 0, w: 0, h: 0 };
@@ -117,7 +118,7 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo, clearLowestInfo) {
         ctx.save();
 
         const safeTop = Renderer.getSafeTop();
@@ -169,8 +170,9 @@ const UI = (() => {
         // Ad row: bonus coins (left) + speed boost (right)
         drawAdRow(ctx, w, h, bonusCoinInfo, coinSpeedInfo);
 
-        // Speed upgrade (compact, below ad row)
+        // Speed upgrade + Clear-lowest (two-column row, below ad row)
         drawSpeedUpgrade(ctx, w, h, coinSpeedInfo);
+        drawClearLowest(ctx, w, h, clearLowestInfo);
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
@@ -331,9 +333,9 @@ const UI = (() => {
         }
 
         const layout = Renderer.getGridLayout();
-        const btnW = w * 0.5;
+        const btnW = (w - 24) / 2;
         const btnH = 32;
-        const btnX = (w - btnW) / 2;
+        const btnX = 8;
         const btnY = layout.gridY + layout.gridSize + 126;
         coinUpgradeButton = { x: btnX, y: btnY, w: btnW, h: btnH };
 
@@ -363,6 +365,38 @@ const UI = (() => {
             ctx.font = `bold ${11}px Arial, sans-serif`;
             ctx.fillText('⬆ SPEED MAX', btnX + btnW / 2, btnY + btnH / 2);
         }
+        ctx.restore();
+    }
+
+    function drawClearLowest(ctx, w, h, info) {
+        if (!info) {
+            clearLowestButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const btnW = (w - 24) / 2;
+        const btnH = 32;
+        const btnX = 16 + btnW;
+        const btnY = layout.gridY + layout.gridSize + 126;
+        clearLowestButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.save();
+        const active = info.canAfford;
+        ctx.fillStyle = active ? '#E05555' : '#888';
+        ctx.globalAlpha = active ? 1 : 0.5;
+        Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${11}px Arial, sans-serif`;
+        const label = info.hasTarget
+            ? `🧹 CLEAR  🪙${formatNumber(info.cost)}`
+            : '🧹 CLEAR';
+        ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
         ctx.restore();
     }
 
@@ -492,7 +526,8 @@ const UI = (() => {
         const mainCheck = status.mainDone ? '✅' : '⬜';
         ctx.fillStyle = status.mainDone ? '#4CAF50' : '#333';
         ctx.font = `bold ${11}px Arial, sans-serif`;
-        ctx.fillText(`${mainCheck} ${status.mainLabel}`, panelX + 10, panelY + 32);
+        const mainProg = formatProgress(status.mainProgress, status.mainDone);
+        ctx.fillText(`${mainCheck} ${status.mainLabel}${mainProg}`, panelX + 10, panelY + 32);
 
         // Bonus missions
         for (let i = 0; i < status.missions.length; i++) {
@@ -500,7 +535,8 @@ const UI = (() => {
             const check = m.done ? '✅' : '⬜';
             ctx.fillStyle = m.done ? '#4CAF50' : '#888';
             ctx.font = `${10}px Arial, sans-serif`;
-            ctx.fillText(`${check} ${m.label}`, panelX + 10, panelY + 50 + i * 13);
+            const prog = formatProgress(m.progress, m.done);
+            ctx.fillText(`${check} ${m.label}${prog}`, panelX + 10, panelY + 50 + i * 13);
         }
 
         // Stars preview
@@ -739,6 +775,10 @@ const UI = (() => {
         return hitRect(speedBoostButton, x, y);
     }
 
+    function hitTestClearLowestButton(x, y) {
+        return hitRect(clearLowestButton, x, y);
+    }
+
     function hitTestMuteButton(x, y) {
         return hitRect(muteButton, x, y);
     }
@@ -751,6 +791,12 @@ const UI = (() => {
         if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
         if (n >= 10000) return (n / 1000).toFixed(1) + 'K';
         return Math.floor(n).toLocaleString();
+    }
+
+    function formatProgress(progress, done) {
+        if (!progress || typeof progress.target !== 'number') return '';
+        const cur = Math.min(progress.current, progress.target);
+        return ` (${formatNumber(cur)}/${formatNumber(progress.target)})`;
     }
 
     return {
@@ -771,6 +817,7 @@ const UI = (() => {
         hitTestBonusCoinButton,
         hitTestCoinUpgradeButton,
         hitTestSpeedBoostButton,
+        hitTestClearLowestButton,
         hitTestRestartButton,
         hitTestRewardButton,
         hitTestMuteButton,
