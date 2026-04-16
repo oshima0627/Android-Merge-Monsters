@@ -166,7 +166,7 @@ const Renderer = (() => {
                     if (mergeablePairs.has(key)) {
                         const pulse = 0.15 + Math.sin(time * 0.005) * 0.1;
                         const data = Monster.getLevelData(cell.level);
-                        const glowColor = data.color === 'rainbow' ? '#FFD700' : data.color;
+                        const glowColor = Monster.getGlowColor(data);
                         ctx.save();
                         ctx.shadowColor = glowColor;
                         ctx.shadowBlur = 12 + Math.sin(time * 0.005) * 6;

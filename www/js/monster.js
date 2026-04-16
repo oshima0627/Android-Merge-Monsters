@@ -4,38 +4,40 @@
 const Monster = (() => {
     const MAX_LEVEL = 30;
 
-    // Color and style definitions per level
+    // Color and style definitions per level.
+    // `color` can be: hex string (solid), two-element array (linear gradient),
+    // or the string 'rainbow' for the animated rainbow gradient (reserved for Lv.30).
     const LEVEL_DATA = {
-        1:  { color: '#88DDFF', eyeType: 'smile',       decoration: null },
-        2:  { color: '#66DD88', eyeType: 'wink',        decoration: null },
-        3:  { color: '#FFDD44', eyeType: 'surprise',    decoration: null },
-        4:  { color: '#FFAA33', eyeType: 'smirk',       decoration: null },
-        5:  { color: '#FF6B6B', eyeType: 'sparkle',     decoration: 'crown' },
-        6:  { color: '#BB66FF', eyeType: 'smug',        decoration: null },
-        7:  { color: '#FF88BB', eyeType: 'heart',       decoration: null },
-        8:  { color: '#4488FF', eyeType: 'sunglasses',  decoration: null },
-        9:  { color: '#FFD700', eyeType: 'normal',      decoration: 'flame' },
-        10: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'halo' },
-        11: { color: 'rainbow',  eyeType: 'heart',      decoration: 'wings' },
-        12: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'crown_jewel' },
-        13: { color: 'rainbow',  eyeType: 'smug',       decoration: 'lightning' },
-        14: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'flame_wings' },
-        15: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'ultimate' },
-        16: { color: 'rainbow',  eyeType: 'surprise',   decoration: 'stars' },
-        17: { color: 'rainbow',  eyeType: 'smirk',      decoration: 'stars' },
-        18: { color: 'rainbow',  eyeType: 'wink',       decoration: 'stars_crown' },
-        19: { color: 'rainbow',  eyeType: 'heart',      decoration: 'stars_crown' },
-        20: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'stars_flame' },
-        21: { color: 'rainbow',  eyeType: 'smug',       decoration: 'divine' },
-        22: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'divine' },
-        23: { color: 'rainbow',  eyeType: 'heart',      decoration: 'divine' },
-        24: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'cosmic' },
-        25: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'cosmic' },
-        26: { color: 'rainbow',  eyeType: 'smug',       decoration: 'cosmic' },
-        27: { color: 'rainbow',  eyeType: 'heart',      decoration: 'cosmic' },
-        28: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'god' },
-        29: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'god' },
-        30: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'god_ultimate' },
+        1:  { color: '#88DDFF',            eyeType: 'smile',       decoration: null },
+        2:  { color: '#66DD88',            eyeType: 'wink',        decoration: null },
+        3:  { color: '#FFDD44',            eyeType: 'surprise',    decoration: null },
+        4:  { color: '#FFAA33',            eyeType: 'smirk',       decoration: null },
+        5:  { color: '#FF6B6B',            eyeType: 'sparkle',     decoration: 'crown' },
+        6:  { color: '#BB66FF',            eyeType: 'smug',        decoration: null },
+        7:  { color: '#FF88BB',            eyeType: 'heart',       decoration: null },
+        8:  { color: '#4488FF',            eyeType: 'sunglasses',  decoration: null },
+        9:  { color: '#FFD700',            eyeType: 'normal',      decoration: 'flame' },
+        10: { color: '#2EC4B6',            eyeType: 'sparkle',     decoration: 'halo' },
+        11: { color: '#D62246',            eyeType: 'heart',       decoration: 'wings' },
+        12: { color: '#7209B7',            eyeType: 'sunglasses',  decoration: 'crown_jewel' },
+        13: { color: '#06D6A0',            eyeType: 'smug',        decoration: 'lightning' },
+        14: { color: '#F72585',            eyeType: 'sparkle',     decoration: 'flame_wings' },
+        15: { color: '#3A86FF',            eyeType: 'sparkle',     decoration: 'ultimate' },
+        16: { color: ['#FF5722', '#FFC107'], eyeType: 'surprise',   decoration: 'stars' },         // fire
+        17: { color: ['#00BFA6', '#1976D2'], eyeType: 'smirk',      decoration: 'stars' },         // ocean
+        18: { color: ['#9C27B0', '#E91E63'], eyeType: 'wink',       decoration: 'stars_crown' },   // berry
+        19: { color: ['#4CAF50', '#CDDC39'], eyeType: 'heart',      decoration: 'stars_crown' },   // meadow
+        20: { color: ['#FF6F00', '#BF360C'], eyeType: 'sunglasses', decoration: 'stars_flame' },   // sunset
+        21: { color: ['#673AB7', '#3F51B5'], eyeType: 'smug',       decoration: 'divine' },        // twilight
+        22: { color: ['#FFECB3', '#FFB300'], eyeType: 'sparkle',    decoration: 'divine' },        // gold metallic
+        23: { color: ['#E0E0E0', '#9E9E9E'], eyeType: 'heart',      decoration: 'divine' },        // silver metallic
+        24: { color: ['#FFD54F', '#F57F17'], eyeType: 'sunglasses', decoration: 'cosmic' },        // amber
+        25: { color: ['#80DEEA', '#006064'], eyeType: 'sparkle',    decoration: 'cosmic' },        // aqua metallic
+        26: { color: ['#CE93D8', '#4A148C'], eyeType: 'smug',       decoration: 'cosmic' },        // violet metallic
+        27: { color: ['#F48FB1', '#880E4F'], eyeType: 'heart',      decoration: 'cosmic' },        // rose metallic
+        28: { color: ['#1A237E', '#000051'], eyeType: 'sunglasses', decoration: 'god' },           // void blue
+        29: { color: ['#263238', '#000000'], eyeType: 'sparkle',    decoration: 'god' },           // obsidian
+        30: { color: 'rainbow',              eyeType: 'sparkle',    decoration: 'god_ultimate' },  // ultimate rainbow
     };
 
     const RAINBOW_COLORS = ['#FF6B6B', '#FFAA33', '#FFDD44', '#66DD88', '#88DDFF', '#4488FF', '#BB66FF'];
@@ -65,6 +67,29 @@ const Monster = (() => {
         return grad;
     }
 
+    function createDuoGradient(ctx, x, y, radius, colors) {
+        const grad = ctx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
+        grad.addColorStop(0, colors[0]);
+        grad.addColorStop(1, colors[1] || colors[0]);
+        return grad;
+    }
+
+    function resolveBodyFill(ctx, x, y, radius, data, time) {
+        if (data.color === 'rainbow') {
+            return createRainbowGradient(ctx, x, y, radius, time);
+        }
+        if (Array.isArray(data.color)) {
+            return createDuoGradient(ctx, x, y, radius, data.color);
+        }
+        return data.color;
+    }
+
+    function getGlowColor(data) {
+        if (data.color === 'rainbow') return '#FFD700';
+        if (Array.isArray(data.color)) return data.color[0];
+        return data.color;
+    }
+
     function draw(ctx, x, y, radius, level, time, alpha) {
         if (alpha === undefined) alpha = 1;
         const data = getLevelData(level);
@@ -78,16 +103,11 @@ const Monster = (() => {
         ctx.fill();
 
         // Body
-        let bodyColor;
-        if (data.color === 'rainbow') {
-            bodyColor = createRainbowGradient(ctx, x, y, radius, time);
-        } else {
-            bodyColor = data.color;
-        }
+        const bodyColor = resolveBodyFill(ctx, x, y, radius, data, time);
 
         // Body glow for high levels
         if (level >= 5) {
-            ctx.shadowColor = data.color === 'rainbow' ? '#FFD700' : data.color;
+            ctx.shadowColor = getGlowColor(data);
             ctx.shadowBlur = 8 + Math.sin(time * 0.005) * 4;
         }
 
@@ -679,6 +699,7 @@ const Monster = (() => {
         MAX_LEVEL,
         LEVEL_DATA,
         getLevelData,
+        getGlowColor,
         coinsPerSecond,
         summonCost,
         draw,
