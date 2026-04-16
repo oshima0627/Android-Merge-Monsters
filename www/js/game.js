@@ -52,8 +52,11 @@ const Game = (() => {
     }
 
     // Milestone tracking
-    const MILESTONES = [5, 8, 10, 12, 15];
-    const MILESTONE_BONUS = { 5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000 };
+    const MILESTONES = [5, 8, 10, 12, 15, 18, 21, 24, 27, 30];
+    const MILESTONE_BONUS = {
+        5: 50, 8: 200, 10: 500, 12: 2000, 15: 10000,
+        18: 50000, 21: 200000, 24: 1000000, 27: 5000000, 30: 50000000,
+    };
     let reachedMilestones = new Set();
 
     // Tutorial

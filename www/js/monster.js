@@ -2,11 +2,11 @@
  * Monster data definitions and Canvas 2D drawing routines.
  */
 const Monster = (() => {
-    const MAX_LEVEL = 15;
+    const MAX_LEVEL = 30;
 
     // Color and style definitions per level
     const LEVEL_DATA = {
-        1:  { color: '#88DDFF', eyeType: 'smile',      decoration: null },
+        1:  { color: '#88DDFF', eyeType: 'smile',       decoration: null },
         2:  { color: '#66DD88', eyeType: 'wink',        decoration: null },
         3:  { color: '#FFDD44', eyeType: 'surprise',    decoration: null },
         4:  { color: '#FFAA33', eyeType: 'smirk',       decoration: null },
@@ -21,6 +21,21 @@ const Monster = (() => {
         13: { color: 'rainbow',  eyeType: 'smug',       decoration: 'lightning' },
         14: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'flame_wings' },
         15: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'ultimate' },
+        16: { color: 'rainbow',  eyeType: 'surprise',   decoration: 'stars' },
+        17: { color: 'rainbow',  eyeType: 'smirk',      decoration: 'stars' },
+        18: { color: 'rainbow',  eyeType: 'wink',       decoration: 'stars_crown' },
+        19: { color: 'rainbow',  eyeType: 'heart',      decoration: 'stars_crown' },
+        20: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'stars_flame' },
+        21: { color: 'rainbow',  eyeType: 'smug',       decoration: 'divine' },
+        22: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'divine' },
+        23: { color: 'rainbow',  eyeType: 'heart',      decoration: 'divine' },
+        24: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'cosmic' },
+        25: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'cosmic' },
+        26: { color: 'rainbow',  eyeType: 'smug',       decoration: 'cosmic' },
+        27: { color: 'rainbow',  eyeType: 'heart',      decoration: 'cosmic' },
+        28: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'god' },
+        29: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'god' },
+        30: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'god_ultimate' },
     };
 
     const RAINBOW_COLORS = ['#FF6B6B', '#FFAA33', '#FFDD44', '#66DD88', '#88DDFF', '#4488FF', '#BB66FF'];
@@ -415,7 +430,79 @@ const Monster = (() => {
                 drawWings(ctx, x, y, radius * 1.1, time);
                 drawFlame(ctx, x, y, radius, time);
                 break;
+            case 'stars':
+                drawOrbitalStars(ctx, x, y, radius, time, 4);
+                break;
+            case 'stars_crown':
+                drawOrbitalStars(ctx, x, y, radius, time, 5);
+                drawCrown(ctx, x, y - radius * 0.9, radius * 0.5, '#FFD700');
+                break;
+            case 'stars_flame':
+                drawOrbitalStars(ctx, x, y, radius, time, 5);
+                drawFlame(ctx, x, y, radius, time);
+                break;
+            case 'divine':
+                drawHalo(ctx, x, y - radius * 1.15, radius * 0.55, time);
+                drawCrown(ctx, x, y - radius * 0.95, radius * 0.55, '#FFD700');
+                drawOrbitalStars(ctx, x, y, radius, time, 6);
+                break;
+            case 'cosmic':
+                drawAura(ctx, x, y, radius, time);
+                drawHalo(ctx, x, y - radius * 1.15, radius * 0.6, time);
+                drawWings(ctx, x, y, radius * 1.1, time);
+                drawOrbitalStars(ctx, x, y, radius, time, 7);
+                drawFlame(ctx, x, y, radius, time);
+                break;
+            case 'god':
+                drawAura(ctx, x, y, radius, time);
+                drawHalo(ctx, x, y - radius * 1.2, radius * 0.65, time);
+                drawCrown(ctx, x, y - radius * 1.0, radius * 0.6, '#FFD700');
+                drawWings(ctx, x, y, radius * 1.2, time);
+                drawOrbitalStars(ctx, x, y, radius, time, 8);
+                drawFlame(ctx, x, y, radius, time);
+                break;
+            case 'god_ultimate':
+                drawAura(ctx, x, y, radius * 1.1, time);
+                drawHalo(ctx, x, y - radius * 1.25, radius * 0.7, time);
+                drawCrown(ctx, x, y - radius * 1.05, radius * 0.65, '#FFD700');
+                drawWings(ctx, x, y, radius * 1.3, time);
+                drawOrbitalStars(ctx, x, y, radius, time, 10);
+                drawFlame(ctx, x, y, radius, time);
+                drawLightning(ctx, x, y, radius, time);
+                drawJewel(ctx, x, y - radius * 1.3, radius * 0.18);
+                break;
         }
+    }
+
+    function drawOrbitalStars(ctx, x, y, radius, time, count) {
+        const orbitR = radius * 1.35;
+        const starSize = radius * 0.12;
+        const baseAngle = time * 0.0015;
+        ctx.save();
+        for (let i = 0; i < count; i++) {
+            const angle = baseAngle + (i / count) * Math.PI * 2;
+            const twinkle = 0.6 + 0.4 * Math.sin(time * 0.006 + i * 1.3);
+            const sx = x + Math.cos(angle) * orbitR;
+            const sy = y + Math.sin(angle) * orbitR * 0.6;
+            ctx.globalAlpha = twinkle;
+            drawStar(ctx, sx, sy, starSize * 0.4, starSize, 4, '#FFF7B0');
+        }
+        ctx.restore();
+    }
+
+    function drawAura(ctx, x, y, radius, time) {
+        const pulse = 0.5 + 0.3 * Math.sin(time * 0.004);
+        const auraR = radius * (1.7 + 0.1 * Math.sin(time * 0.003));
+        const grad = ctx.createRadialGradient(x, y, radius * 0.9, x, y, auraR);
+        grad.addColorStop(0, `rgba(255, 200, 255, ${0.35 * pulse})`);
+        grad.addColorStop(0.5, `rgba(180, 220, 255, ${0.22 * pulse})`);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.save();
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, auraR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 
     function drawCrown(ctx, x, y, size, color) {
