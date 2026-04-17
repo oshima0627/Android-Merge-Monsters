@@ -2,28 +2,83 @@
  * Monster data definitions and Canvas 2D drawing routines.
  */
 const Monster = (() => {
-    const MAX_LEVEL = 15;
+    const MAX_LEVEL = 30;
 
-    // Color and style definitions per level
+    // Color and style definitions per level.
+    // `color` can be: hex string (solid), two-element array (linear gradient),
+    // or the string 'rainbow' for the animated rainbow gradient (reserved for Lv.30).
     const LEVEL_DATA = {
-        1:  { color: '#88DDFF', eyeType: 'smile',      decoration: null },
-        2:  { color: '#66DD88', eyeType: 'wink',        decoration: null },
-        3:  { color: '#FFDD44', eyeType: 'surprise',    decoration: null },
-        4:  { color: '#FFAA33', eyeType: 'smirk',       decoration: null },
-        5:  { color: '#FF6B6B', eyeType: 'sparkle',     decoration: 'crown' },
-        6:  { color: '#BB66FF', eyeType: 'smug',        decoration: null },
-        7:  { color: '#FF88BB', eyeType: 'heart',       decoration: null },
-        8:  { color: '#4488FF', eyeType: 'sunglasses',  decoration: null },
-        9:  { color: '#FFD700', eyeType: 'normal',      decoration: 'flame' },
-        10: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'halo' },
-        11: { color: 'rainbow',  eyeType: 'heart',      decoration: 'wings' },
-        12: { color: 'rainbow',  eyeType: 'sunglasses', decoration: 'crown_jewel' },
-        13: { color: 'rainbow',  eyeType: 'smug',       decoration: 'lightning' },
-        14: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'flame_wings' },
-        15: { color: 'rainbow',  eyeType: 'sparkle',    decoration: 'ultimate' },
+        1:  { color: '#88DDFF',            eyeType: 'smile',       decoration: null },
+        2:  { color: '#66DD88',            eyeType: 'wink',        decoration: null },
+        3:  { color: '#FFDD44',            eyeType: 'surprise',    decoration: null },
+        4:  { color: '#FFAA33',            eyeType: 'smirk',       decoration: null },
+        5:  { color: '#FF6B6B',            eyeType: 'sparkle',     decoration: 'crown' },
+        6:  { color: '#BB66FF',            eyeType: 'smug',        decoration: null },
+        7:  { color: '#FF88BB',            eyeType: 'heart',       decoration: null },
+        8:  { color: '#4488FF',            eyeType: 'sunglasses',  decoration: null },
+        9:  { color: '#FFD700',            eyeType: 'normal',      decoration: 'flame' },
+        10: { color: '#2EC4B6',            eyeType: 'sparkle',     decoration: 'halo' },
+        11: { color: '#D62246',            eyeType: 'heart',       decoration: 'wings' },
+        12: { color: '#7209B7',            eyeType: 'sunglasses',  decoration: 'crown_jewel' },
+        13: { color: '#06D6A0',            eyeType: 'smug',        decoration: 'lightning' },
+        14: { color: '#F72585',            eyeType: 'sparkle',     decoration: 'flame_wings' },
+        15: { color: '#3A86FF',            eyeType: 'sparkle',     decoration: 'ultimate' },
+        16: { color: ['#FF5722', '#FFC107'], eyeType: 'surprise',   decoration: 'stars' },         // fire
+        17: { color: ['#00BFA6', '#1976D2'], eyeType: 'smirk',      decoration: 'stars' },         // ocean
+        18: { color: ['#9C27B0', '#E91E63'], eyeType: 'wink',       decoration: 'stars_crown' },   // berry
+        19: { color: ['#4CAF50', '#CDDC39'], eyeType: 'heart',      decoration: 'stars_crown' },   // meadow
+        20: { color: ['#FF6F00', '#BF360C'], eyeType: 'sunglasses', decoration: 'stars_flame' },   // sunset
+        21: { color: ['#673AB7', '#3F51B5'], eyeType: 'smug',       decoration: 'divine' },        // twilight
+        22: { color: ['#FFECB3', '#FFB300'], eyeType: 'sparkle',    decoration: 'divine' },        // gold metallic
+        23: { color: ['#E0E0E0', '#9E9E9E'], eyeType: 'heart',      decoration: 'divine' },        // silver metallic
+        24: { color: ['#FFD54F', '#F57F17'], eyeType: 'sunglasses', decoration: 'cosmic' },        // amber
+        25: { color: ['#80DEEA', '#006064'], eyeType: 'sparkle',    decoration: 'cosmic' },        // aqua metallic
+        26: { color: ['#CE93D8', '#4A148C'], eyeType: 'smug',       decoration: 'cosmic' },        // violet metallic
+        27: { color: ['#F48FB1', '#880E4F'], eyeType: 'heart',      decoration: 'cosmic' },        // rose metallic
+        28: { color: ['#1A237E', '#000051'], eyeType: 'sunglasses', decoration: 'god' },           // void blue
+        29: { color: ['#263238', '#000000'], eyeType: 'sparkle',    decoration: 'god' },           // obsidian
+        30: { color: 'rainbow',              eyeType: 'sparkle',    decoration: 'god_ultimate' },  // ultimate rainbow
     };
 
     const RAINBOW_COLORS = ['#FF6B6B', '#FFAA33', '#FFDD44', '#66DD88', '#88DDFF', '#4488FF', '#BB66FF'];
+
+    // Per-level name and short lore for the monster codex.
+    const LORE = {
+        1:  { name: 'ポポ',       desc: '青空の子。合体旅のはじまり。' },
+        2:  { name: 'リーフィ',   desc: '若草のそよ風、はじめての芽吹き。' },
+        3:  { name: 'タマゴン',   desc: '黄色いひよっこ、驚くのが得意。' },
+        4:  { name: 'オレンジー', desc: 'やる気いっぱいのお調子者。' },
+        5:  { name: 'クラウニー', desc: '小さな王冠を授かった若き戦士。' },
+        6:  { name: 'ムラサメ',   desc: '紫の霧を操る、頭脳派のモンスター。' },
+        7:  { name: 'ピンクル',   desc: '愛らしい微笑みで仲間を元気づける。' },
+        8:  { name: 'ブルーノ',   desc: '青き戦士、頼れる兄貴分。' },
+        9:  { name: 'ゴールドン', desc: '炎をまとう黄金の英雄。' },
+        10: { name: 'テルビス',   desc: '翡翠の光輪、静寂の守り手。' },
+        11: { name: 'レッドラ',   desc: '真紅の翼を広げ、戦場を駆ける。' },
+        12: { name: 'ロイヤ',     desc: '紫紺の王、王冠の宝石を継ぐ者。' },
+        13: { name: 'エメルダ',   desc: '緑玉の雷をまとう電撃使い。' },
+        14: { name: 'フラミナ',   desc: '燃える翼を持つ魔性の舞姫。' },
+        15: { name: 'コバルド',   desc: '蒼き究極の騎士、勇者の頂点。' },
+        16: { name: 'イグニス',   desc: '永遠に燃えゆく炎、星を纏う火精。' },
+        17: { name: 'マリナー',   desc: '深海と大空を繋ぐ蒼の守護者。' },
+        18: { name: 'ベリーナ',   desc: '夜空のベリー、王冠を戴く魔女。' },
+        19: { name: 'メドーウ',   desc: '草原の歌姫、星を呼び寄せる者。' },
+        20: { name: 'サンセッタ', desc: '夕焼けを閉じ込めた終章の炎。' },
+        21: { name: 'トワイラ',   desc: '黄昏の光、神の使いへ至る。' },
+        22: { name: 'オーレア',   desc: '黄金の神聖、祝福を纏いし者。' },
+        23: { name: 'アーギュラ', desc: '白銀の神聖、沈黙の守護者。' },
+        24: { name: 'アンバラ',   desc: '琥珀の宇宙、時を封じる者。' },
+        25: { name: 'アクアリス', desc: '深海の宇宙、蒼き神秘。' },
+        26: { name: 'ヴァイオラ', desc: '菫色の宇宙、魔眼を持つ。' },
+        27: { name: 'ローゼア',   desc: '薔薇色の宇宙、永遠の華。' },
+        28: { name: 'ヴォイディス', desc: '虚無の青、宇宙の淵に立つ者。' },
+        29: { name: 'ニグラム',   desc: '漆黒の神、すべてを呑む影。' },
+        30: { name: 'プリズモン', desc: '虹色の創造神、全てを超越せし者。' },
+    };
+
+    function getLore(level) {
+        return LORE[level] || { name: '???', desc: '???' };
+    }
 
     function getLevelData(level) {
         if (level < 1) level = 1;
@@ -50,6 +105,29 @@ const Monster = (() => {
         return grad;
     }
 
+    function createDuoGradient(ctx, x, y, radius, colors) {
+        const grad = ctx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
+        grad.addColorStop(0, colors[0]);
+        grad.addColorStop(1, colors[1] || colors[0]);
+        return grad;
+    }
+
+    function resolveBodyFill(ctx, x, y, radius, data, time) {
+        if (data.color === 'rainbow') {
+            return createRainbowGradient(ctx, x, y, radius, time);
+        }
+        if (Array.isArray(data.color)) {
+            return createDuoGradient(ctx, x, y, radius, data.color);
+        }
+        return data.color;
+    }
+
+    function getGlowColor(data) {
+        if (data.color === 'rainbow') return '#FFD700';
+        if (Array.isArray(data.color)) return data.color[0];
+        return data.color;
+    }
+
     function draw(ctx, x, y, radius, level, time, alpha) {
         if (alpha === undefined) alpha = 1;
         const data = getLevelData(level);
@@ -63,16 +141,11 @@ const Monster = (() => {
         ctx.fill();
 
         // Body
-        let bodyColor;
-        if (data.color === 'rainbow') {
-            bodyColor = createRainbowGradient(ctx, x, y, radius, time);
-        } else {
-            bodyColor = data.color;
-        }
+        const bodyColor = resolveBodyFill(ctx, x, y, radius, data, time);
 
         // Body glow for high levels
         if (level >= 5) {
-            ctx.shadowColor = data.color === 'rainbow' ? '#FFD700' : data.color;
+            ctx.shadowColor = getGlowColor(data);
             ctx.shadowBlur = 8 + Math.sin(time * 0.005) * 4;
         }
 
@@ -415,7 +488,79 @@ const Monster = (() => {
                 drawWings(ctx, x, y, radius * 1.1, time);
                 drawFlame(ctx, x, y, radius, time);
                 break;
+            case 'stars':
+                drawOrbitalStars(ctx, x, y, radius, time, 4);
+                break;
+            case 'stars_crown':
+                drawOrbitalStars(ctx, x, y, radius, time, 5);
+                drawCrown(ctx, x, y - radius * 0.9, radius * 0.5, '#FFD700');
+                break;
+            case 'stars_flame':
+                drawOrbitalStars(ctx, x, y, radius, time, 5);
+                drawFlame(ctx, x, y, radius, time);
+                break;
+            case 'divine':
+                drawHalo(ctx, x, y - radius * 1.15, radius * 0.55, time);
+                drawCrown(ctx, x, y - radius * 0.95, radius * 0.55, '#FFD700');
+                drawOrbitalStars(ctx, x, y, radius, time, 6);
+                break;
+            case 'cosmic':
+                drawAura(ctx, x, y, radius, time);
+                drawHalo(ctx, x, y - radius * 1.15, radius * 0.6, time);
+                drawWings(ctx, x, y, radius * 1.1, time);
+                drawOrbitalStars(ctx, x, y, radius, time, 7);
+                drawFlame(ctx, x, y, radius, time);
+                break;
+            case 'god':
+                drawAura(ctx, x, y, radius, time);
+                drawHalo(ctx, x, y - radius * 1.2, radius * 0.65, time);
+                drawCrown(ctx, x, y - radius * 1.0, radius * 0.6, '#FFD700');
+                drawWings(ctx, x, y, radius * 1.2, time);
+                drawOrbitalStars(ctx, x, y, radius, time, 8);
+                drawFlame(ctx, x, y, radius, time);
+                break;
+            case 'god_ultimate':
+                drawAura(ctx, x, y, radius * 1.1, time);
+                drawHalo(ctx, x, y - radius * 1.25, radius * 0.7, time);
+                drawCrown(ctx, x, y - radius * 1.05, radius * 0.65, '#FFD700');
+                drawWings(ctx, x, y, radius * 1.3, time);
+                drawOrbitalStars(ctx, x, y, radius, time, 10);
+                drawFlame(ctx, x, y, radius, time);
+                drawLightning(ctx, x, y, radius, time);
+                drawJewel(ctx, x, y - radius * 1.3, radius * 0.18);
+                break;
         }
+    }
+
+    function drawOrbitalStars(ctx, x, y, radius, time, count) {
+        const orbitR = radius * 1.35;
+        const starSize = radius * 0.12;
+        const baseAngle = time * 0.0015;
+        ctx.save();
+        for (let i = 0; i < count; i++) {
+            const angle = baseAngle + (i / count) * Math.PI * 2;
+            const twinkle = 0.6 + 0.4 * Math.sin(time * 0.006 + i * 1.3);
+            const sx = x + Math.cos(angle) * orbitR;
+            const sy = y + Math.sin(angle) * orbitR * 0.6;
+            ctx.globalAlpha = twinkle;
+            drawStar(ctx, sx, sy, starSize * 0.4, starSize, 4, '#FFF7B0');
+        }
+        ctx.restore();
+    }
+
+    function drawAura(ctx, x, y, radius, time) {
+        const pulse = 0.5 + 0.3 * Math.sin(time * 0.004);
+        const auraR = radius * (1.7 + 0.1 * Math.sin(time * 0.003));
+        const grad = ctx.createRadialGradient(x, y, radius * 0.9, x, y, auraR);
+        grad.addColorStop(0, `rgba(255, 200, 255, ${0.35 * pulse})`);
+        grad.addColorStop(0.5, `rgba(180, 220, 255, ${0.22 * pulse})`);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.save();
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, auraR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 
     function drawCrown(ctx, x, y, size, color) {
@@ -591,7 +736,10 @@ const Monster = (() => {
     return {
         MAX_LEVEL,
         LEVEL_DATA,
+        LORE,
         getLevelData,
+        getLore,
+        getGlowColor,
         coinsPerSecond,
         summonCost,
         draw,

@@ -162,6 +162,15 @@ const Grid = (() => {
         return toRemove;
     }
 
+    function removeOneLowest() {
+        const occupied = getOccupiedCells();
+        if (occupied.length === 0) return null;
+        occupied.sort((a, b) => a.monster.level - b.monster.level);
+        const target = occupied[0];
+        clearCell(target.row, target.col);
+        return { row: target.row, col: target.col, level: target.monster.level };
+    }
+
     function getTotalCoinsPerSecond() {
         let total = 0;
         for (let r = 0; r < ROWS; r++) {
@@ -190,6 +199,25 @@ const Grid = (() => {
         return cells;
     }
 
+    function setCells(newCells) {
+        if (!Array.isArray(newCells) || newCells.length !== ROWS) return false;
+        const restored = [];
+        for (let r = 0; r < ROWS; r++) {
+            if (!Array.isArray(newCells[r]) || newCells[r].length !== COLS) return false;
+            restored[r] = [];
+            for (let c = 0; c < COLS; c++) {
+                const cell = newCells[r][c];
+                if (cell && typeof cell.level === 'number' && cell.level >= 1) {
+                    restored[r][c] = { level: Math.min(cell.level, Monster.MAX_LEVEL) };
+                } else {
+                    restored[r][c] = null;
+                }
+            }
+        }
+        cells = restored;
+        return true;
+    }
+
     return {
         COLS,
         ROWS,
@@ -209,8 +237,10 @@ const Grid = (() => {
         isGameOver,
         getMergeablePairs,
         removeLowestTwo,
+        removeOneLowest,
         getTotalCoinsPerSecond,
         getHighestLevel,
         getCells,
+        setCells,
     };
 })();
