@@ -9,15 +9,33 @@ const UI = (() => {
     let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
     let coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
     let speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
+    let clearLowestButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
     let muteButton = { x: 0, y: 0, w: 0, h: 0 };
+    let codexButton = { x: 0, y: 0, w: 0, h: 0 };
+    let codexBackButton = { x: 0, y: 0, w: 0, h: 0 };
+    let codexPrevButton = { x: 0, y: 0, w: 0, h: 0 };
+    let codexNextButton = { x: 0, y: 0, w: 0, h: 0 };
 
     // Milestone text animation
     let milestoneText = null;   // { text, progress, duration }
     let newRecordText = null;   // { progress, duration }
 
+    const ZERO = { x: 0, y: 0, w: 0, h: 0 };
+    function resetPlayButtons() {
+        summonButton = { ...ZERO };
+        freeSummonButton = { ...ZERO };
+        bonusCoinButton = { ...ZERO };
+        coinUpgradeButton = { ...ZERO };
+        speedBoostButton = { ...ZERO };
+        clearLowestButton = { ...ZERO };
+        codexButton = { ...ZERO };
+    }
+
     function drawTitleScreen(ctx, w, h, time, highScore, highestLevel) {
+        const safeTop = Renderer.getSafeTop();
+
         // Background
         const bgHue = 190 + Math.sin(time * 0.0002) * 15;
         const grad = ctx.createLinearGradient(0, 0, 0, h);
@@ -96,9 +114,22 @@ const UI = (() => {
         ctx.font = `bold ${w * 0.06}px 'Arial Rounded MT Bold', Arial, sans-serif`;
         ctx.fillText('START', w / 2, btnY + btnH / 2);
 
+        // CODEX button (below START)
+        const cbW = w * 0.45;
+        const cbH = h * 0.055;
+        const cbX = (w - cbW) / 2;
+        const cbY = btnY + btnH + h * 0.025;
+        codexButton = { x: cbX, y: cbY, w: cbW, h: cbH };
+        ctx.fillStyle = '#7B6CFF';
+        Renderer.drawRoundRect(ctx, cbX, cbY, cbW, cbH, cbH / 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${w * 0.04}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText('📖 モンスター図鑑', w / 2, cbY + cbH / 2);
+
         // Mute button
         const muteSize = w * 0.08;
-        muteButton = { x: w - muteSize - 12, y: 12, w: muteSize, h: muteSize };
+        muteButton = { x: w - muteSize - 12, y: 12 + safeTop, w: muteSize, h: muteSize };
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.beginPath();
         ctx.arc(muteButton.x + muteSize / 2, muteButton.y + muteSize / 2, muteSize / 2, 0, Math.PI * 2);
@@ -110,16 +141,19 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo, clearLowestInfo) {
         ctx.save();
+
+        const safeTop = Renderer.getSafeTop();
+        const hudTop = 6 + safeTop;
 
         // Top bar background
         ctx.fillStyle = 'rgba(255,255,255,0.7)';
-        Renderer.drawRoundRect(ctx, 8, 6, w - 16, 42, 12);
+        Renderer.drawRoundRect(ctx, 8, hudTop, w - 16, 42, 12);
         ctx.fill();
 
         ctx.textBaseline = 'middle';
-        const hudY = 27;
+        const hudY = hudTop + 21;
 
         // Coins (left)
         ctx.textAlign = 'left';
@@ -159,12 +193,13 @@ const UI = (() => {
         // Ad row: bonus coins (left) + speed boost (right)
         drawAdRow(ctx, w, h, bonusCoinInfo, coinSpeedInfo);
 
-        // Speed upgrade (compact, below ad row)
+        // Speed upgrade + Clear-lowest (two-column row, below ad row)
         drawSpeedUpgrade(ctx, w, h, coinSpeedInfo);
+        drawClearLowest(ctx, w, h, clearLowestInfo);
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
-        muteButton = { x: 8, y: 52, w: muteSize, h: muteSize };
+        muteButton = { x: 8, y: hudTop + 46, w: muteSize, h: muteSize };
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.beginPath();
@@ -175,6 +210,20 @@ const UI = (() => {
         ctx.font = `${muteSize * 0.45}px Arial`;
         ctx.fillStyle = '#666';
         ctx.fillText(Sound.isMuted() ? '🔇' : '🔊', muteButton.x + muteSize / 2, muteButton.y + muteSize / 2);
+        ctx.restore();
+
+        // Codex button (next to mute)
+        const codexSize = 32;
+        codexButton = { x: 8 + muteSize + 8, y: hudTop + 46, w: codexSize, h: codexSize };
+        ctx.save();
+        ctx.fillStyle = 'rgba(123,108,255,0.18)';
+        ctx.beginPath();
+        ctx.arc(codexButton.x + codexSize / 2, codexButton.y + codexSize / 2, codexSize / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `${codexSize * 0.5}px Arial`;
+        ctx.fillText('📖', codexButton.x + codexSize / 2, codexButton.y + codexSize / 2);
         ctx.restore();
     }
 
@@ -311,9 +360,9 @@ const UI = (() => {
         }
 
         const layout = Renderer.getGridLayout();
-        const btnW = w * 0.5;
+        const btnW = (w - 24) / 2;
         const btnH = 32;
-        const btnX = (w - btnW) / 2;
+        const btnX = 8;
         const btnY = layout.gridY + layout.gridSize + 126;
         coinUpgradeButton = { x: btnX, y: btnY, w: btnW, h: btnH };
 
@@ -343,6 +392,38 @@ const UI = (() => {
             ctx.font = `bold ${11}px Arial, sans-serif`;
             ctx.fillText('⬆ SPEED MAX', btnX + btnW / 2, btnY + btnH / 2);
         }
+        ctx.restore();
+    }
+
+    function drawClearLowest(ctx, w, h, info) {
+        if (!info) {
+            clearLowestButton = { x: 0, y: 0, w: 0, h: 0 };
+            return;
+        }
+
+        const layout = Renderer.getGridLayout();
+        const btnW = (w - 24) / 2;
+        const btnH = 32;
+        const btnX = 16 + btnW;
+        const btnY = layout.gridY + layout.gridSize + 126;
+        clearLowestButton = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+        ctx.save();
+        const active = info.canAfford;
+        ctx.fillStyle = active ? '#E05555' : '#888';
+        ctx.globalAlpha = active ? 1 : 0.5;
+        Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${11}px Arial, sans-serif`;
+        const label = info.hasTarget
+            ? `🧹 CLEAR  🪙${formatNumber(info.cost)}`
+            : '🧹 CLEAR';
+        ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
         ctx.restore();
     }
 
@@ -472,7 +553,8 @@ const UI = (() => {
         const mainCheck = status.mainDone ? '✅' : '⬜';
         ctx.fillStyle = status.mainDone ? '#4CAF50' : '#333';
         ctx.font = `bold ${11}px Arial, sans-serif`;
-        ctx.fillText(`${mainCheck} ${status.mainLabel}`, panelX + 10, panelY + 32);
+        const mainProg = formatProgress(status.mainProgress, status.mainDone);
+        ctx.fillText(`${mainCheck} ${status.mainLabel}${mainProg}`, panelX + 10, panelY + 32);
 
         // Bonus missions
         for (let i = 0; i < status.missions.length; i++) {
@@ -480,7 +562,8 @@ const UI = (() => {
             const check = m.done ? '✅' : '⬜';
             ctx.fillStyle = m.done ? '#4CAF50' : '#888';
             ctx.font = `${10}px Arial, sans-serif`;
-            ctx.fillText(`${check} ${m.label}`, panelX + 10, panelY + 50 + i * 13);
+            const prog = formatProgress(m.progress, m.done);
+            ctx.fillText(`${check} ${m.label}${prog}`, panelX + 10, panelY + 50 + i * 13);
         }
 
         // Stars preview
@@ -609,6 +692,232 @@ const UI = (() => {
         ctx.restore();
     }
 
+    function drawStageIntro(ctx, w, h, intro) {
+        if (!intro) return;
+        ctx.save();
+        ctx.fillStyle = 'rgba(10,12,35,0.78)';
+        ctx.fillRect(0, 0, w, h);
+
+        const pw = w * 0.82;
+        const ph = h * 0.32;
+        const px = (w - pw) / 2;
+        const py = (h - ph) / 2;
+
+        ctx.shadowColor = 'rgba(0,0,0,0.35)';
+        ctx.shadowBlur = 20;
+        const grad = ctx.createLinearGradient(px, py, px, py + ph);
+        grad.addColorStop(0, '#FFF8E7');
+        grad.addColorStop(1, '#FFE8C0');
+        ctx.fillStyle = grad;
+        Renderer.drawRoundRect(ctx, px, py, pw, ph, 18);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.strokeStyle = '#C8A45A';
+        ctx.lineWidth = 2;
+        Renderer.drawRoundRect(ctx, px + 6, py + 6, pw - 12, ph - 12, 14);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // Stage header
+        ctx.fillStyle = '#8A5A18';
+        ctx.font = `bold ${Math.round(w * 0.035)}px Arial, sans-serif`;
+        ctx.fillText(`STAGE ${intro.id}`, w / 2, py + ph * 0.17);
+
+        // Stage name
+        ctx.fillStyle = '#3A2A10';
+        ctx.font = `bold ${Math.round(w * 0.06)}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText(intro.name, w / 2, py + ph * 0.33);
+
+        // Intro body (support \n)
+        ctx.fillStyle = '#5A4A30';
+        ctx.font = `${Math.round(w * 0.038)}px Arial, sans-serif`;
+        const lines = (intro.intro || '').split('\n');
+        const lineH = Math.round(w * 0.055);
+        const baseY = py + ph * 0.56;
+        for (let i = 0; i < lines.length; i++) {
+            ctx.fillText(lines[i], w / 2, baseY + i * lineH);
+        }
+
+        // Tap to continue hint
+        ctx.fillStyle = '#8A5A18';
+        ctx.font = `${Math.round(w * 0.032)}px Arial, sans-serif`;
+        ctx.fillText('画面をタップして冒険を始める', w / 2, py + ph - 18);
+
+        ctx.restore();
+    }
+
+    const CODEX_PER_PAGE = 6;
+    function drawCodex(ctx, w, h, time, page, totalPages, seenLevels) {
+        ctx.save();
+        const safeTop = Renderer.getSafeTop();
+
+        // Background
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+        bgGrad.addColorStop(0, '#1A1438');
+        bgGrad.addColorStop(1, '#2B1B4A');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Header
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const headerY = safeTop + 40;
+        ctx.fillStyle = '#FFD86B';
+        ctx.font = `bold ${Math.round(w * 0.07)}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText('モンスター図鑑', w / 2, headerY);
+
+        // Back button (top-left)
+        const backSize = 40;
+        codexBackButton = { x: 12, y: safeTop + 18, w: backSize * 1.6, h: backSize };
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        Renderer.drawRoundRect(ctx, codexBackButton.x, codexBackButton.y, codexBackButton.w, codexBackButton.h, backSize / 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${14}px Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('← 戻る', codexBackButton.x + codexBackButton.w / 2, codexBackButton.y + codexBackButton.h / 2);
+
+        // Tiles (2 columns x 3 rows)
+        const tileMarginX = 14;
+        const tileMarginY = 10;
+        const cols = 2;
+        const rows = CODEX_PER_PAGE / cols;
+        const gridTop = headerY + 40;
+        const footerH = 70 + Renderer.getSafeBottom();
+        const gridBottom = h - footerH;
+        const gridAvailH = gridBottom - gridTop;
+        const tileW = (w - tileMarginX * (cols + 1)) / cols;
+        const tileH = (gridAvailH - tileMarginY * (rows + 1)) / rows;
+
+        const startLv = page * CODEX_PER_PAGE + 1;
+        for (let i = 0; i < CODEX_PER_PAGE; i++) {
+            const lv = startLv + i;
+            if (lv > Monster.MAX_LEVEL) break;
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const tx = tileMarginX + col * (tileW + tileMarginX);
+            const ty = gridTop + tileMarginY + row * (tileH + tileMarginY);
+            drawCodexTile(ctx, tx, ty, tileW, tileH, lv, seenLevels.has(lv), time);
+        }
+
+        // Footer: page indicator + prev/next
+        const footerY = gridBottom + 16;
+        const navBtnW = 90;
+        const navBtnH = 40;
+        codexPrevButton = { x: 16, y: footerY, w: navBtnW, h: navBtnH };
+        codexNextButton = { x: w - 16 - navBtnW, y: footerY, w: navBtnW, h: navBtnH };
+
+        const canPrev = page > 0;
+        const canNext = page < totalPages - 1;
+
+        drawNavBtn(ctx, codexPrevButton, '◀ 前', canPrev);
+        drawNavBtn(ctx, codexNextButton, '次 ▶', canNext);
+
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = `bold ${14}px Arial, sans-serif`;
+        ctx.fillText(`${page + 1} / ${totalPages}`, w / 2, footerY + navBtnH / 2);
+
+        // Collected count
+        const collected = seenLevels ? seenLevels.size : 0;
+        ctx.font = `${12}px Arial, sans-serif`;
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        ctx.fillText(`発見: ${collected} / ${Monster.MAX_LEVEL}`, w / 2, footerY + navBtnH + 16);
+
+        ctx.restore();
+    }
+
+    function drawNavBtn(ctx, rect, label, enabled) {
+        ctx.save();
+        ctx.globalAlpha = enabled ? 1 : 0.35;
+        ctx.fillStyle = '#7B6CFF';
+        Renderer.drawRoundRect(ctx, rect.x, rect.y, rect.w, rect.h, rect.h / 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2);
+        ctx.restore();
+    }
+
+    function drawCodexTile(ctx, x, y, w, h, level, unlocked, time) {
+        ctx.save();
+        // Tile bg
+        ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.25)';
+        Renderer.drawRoundRect(ctx, x, y, w, h, 12);
+        ctx.fill();
+        ctx.strokeStyle = unlocked ? 'rgba(255,216,107,0.35)' : 'rgba(255,255,255,0.05)';
+        ctx.lineWidth = 1.5;
+        Renderer.drawRoundRect(ctx, x, y, w, h, 12);
+        ctx.stroke();
+
+        // Monster slot (left side)
+        const slotSize = Math.min(h * 0.75, w * 0.38);
+        const mx = x + slotSize / 2 + 10;
+        const my = y + h / 2;
+        const monR = slotSize * 0.38;
+
+        if (unlocked) {
+            Monster.draw(ctx, mx, my, monR, level, time, 1);
+        } else {
+            // Silhouette
+            ctx.fillStyle = 'rgba(0,0,0,0.55)';
+            ctx.beginPath();
+            ctx.arc(mx, my, monR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.font = `bold ${Math.round(monR * 0.9)}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', mx, my);
+        }
+
+        // Text (right side)
+        const tx = x + slotSize + 24;
+        const tw = w - (tx - x) - 10;
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = unlocked ? '#FFD86B' : 'rgba(255,255,255,0.4)';
+        ctx.font = `bold ${12}px Arial, sans-serif`;
+        ctx.fillText(`Lv.${level}`, tx, y + 12);
+
+        const lore = Monster.getLore(level);
+        ctx.fillStyle = unlocked ? '#fff' : 'rgba(255,255,255,0.4)';
+        ctx.font = `bold ${14}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.fillText(unlocked ? lore.name : '???', tx, y + 28);
+
+        ctx.fillStyle = unlocked ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
+        ctx.font = `${11}px Arial, sans-serif`;
+        wrapText(ctx, unlocked ? lore.desc : '未発見 — 合体で出会おう', tx, y + 50, tw, 14);
+
+        ctx.restore();
+    }
+
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+        if (!text) return;
+        let line = '';
+        let yy = y;
+        for (let i = 0; i < text.length; i++) {
+            const testLine = line + text[i];
+            const width = ctx.measureText(testLine).width;
+            if (width > maxWidth && line !== '') {
+                ctx.fillText(line, x, yy);
+                line = text[i];
+                yy += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        if (line) ctx.fillText(line, x, yy);
+    }
+
     function showMilestone(text) {
         milestoneText = { text: text, progress: 0, duration: 2.0 };
     }
@@ -719,9 +1028,18 @@ const UI = (() => {
         return hitRect(speedBoostButton, x, y);
     }
 
+    function hitTestClearLowestButton(x, y) {
+        return hitRect(clearLowestButton, x, y);
+    }
+
     function hitTestMuteButton(x, y) {
         return hitRect(muteButton, x, y);
     }
+
+    function hitTestCodexButton(x, y) { return hitRect(codexButton, x, y); }
+    function hitTestCodexBack(x, y) { return hitRect(codexBackButton, x, y); }
+    function hitTestCodexPrev(x, y) { return hitRect(codexPrevButton, x, y); }
+    function hitTestCodexNext(x, y) { return hitRect(codexNextButton, x, y); }
 
     function hitRect(rect, x, y) {
         return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
@@ -733,6 +1051,12 @@ const UI = (() => {
         return Math.floor(n).toLocaleString();
     }
 
+    function formatProgress(progress, done) {
+        if (!progress || typeof progress.target !== 'number') return '';
+        const cur = Math.min(progress.current, progress.target);
+        return ` (${formatNumber(cur)}/${formatNumber(progress.target)})`;
+    }
+
     return {
         drawTitleScreen,
         drawHUD,
@@ -741,6 +1065,9 @@ const UI = (() => {
         drawOverlays,
         drawStageInfo,
         drawStageClear,
+        drawStageIntro,
+        drawCodex,
+        resetPlayButtons,
         drawTutorial,
         showMilestone,
         showNewRecord,
@@ -751,9 +1078,14 @@ const UI = (() => {
         hitTestBonusCoinButton,
         hitTestCoinUpgradeButton,
         hitTestSpeedBoostButton,
+        hitTestClearLowestButton,
         hitTestRestartButton,
         hitTestRewardButton,
         hitTestMuteButton,
+        hitTestCodexButton,
+        hitTestCodexBack,
+        hitTestCodexPrev,
+        hitTestCodexNext,
         formatNumber,
     };
 })();

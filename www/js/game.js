@@ -6,8 +6,13 @@ const Game = (() => {
     const STATE_TITLE = 'title';
     const STATE_PLAYING = 'playing';
     const STATE_GAMEOVER = 'gameover';
+    const STATE_CODEX = 'codex';
 
     let state = STATE_TITLE;
+    let codexReturnState = STATE_TITLE;
+    let codexPage = 0;
+    let seenLevels = new Set();
+    let pendingStageIntro = null; // { id, name, intro }
     let coins = 0;
     let score = 0;
     let mergeCount = 0;
@@ -30,12 +35,12 @@ const Game = (() => {
 
     // Coin speed system
     // 1) Permanent upgrade (purchased with coins)
-    const UPGRADE_COSTS = [30, 100, 300, 800, 2000];
-    const UPGRADE_MULTIPLIERS = [1.0, 1.3, 1.6, 2.0, 2.5, 3.0];
+    const UPGRADE_COSTS = [30, 100, 300, 800, 2000, 5000, 12000, 30000, 80000, 200000];
+    const UPGRADE_MULTIPLIERS = [1.0, 1.3, 1.6, 2.0, 2.5, 3.0, 3.6, 4.2, 5.0, 6.0, 7.5];
     let coinUpgradeLevel = 0;
     // 2) Ad boost (temporary, scales with upgrade level)
     const AD_BOOST_DURATION = 60;
-    const AD_BOOST_MULTIPLIERS = [1.5, 1.8, 2.0, 2.3, 2.5, 3.0];
+    const AD_BOOST_MULTIPLIERS = [1.5, 1.8, 2.0, 2.3, 2.5, 3.0, 3.3, 3.6, 4.0, 4.5, 5.0];
     let adBoostTimer = 0;
     function getAdBoostMultiplier() {
         return AD_BOOST_MULTIPLIERS[coinUpgradeLevel] || AD_BOOST_MULTIPLIERS[AD_BOOST_MULTIPLIERS.length - 1];
@@ -51,7 +56,7 @@ const Game = (() => {
         return upgrade * adBoost * stage;
     }
 
-    // (Milestones replaced by per-level-up rewards)
+    // (Milestones replaced by per-level-up rewards — see handleMerge)
 
     // Tutorial
     let showTutorial = false;
@@ -64,6 +69,20 @@ const Game = (() => {
     let stageClearTimer = 0;
     const STAGE_CLEAR_DURATION = 3.0;
 
+    // Periodic session save
+    let saveTimer = 0;
+    const SAVE_INTERVAL = 2.0;
+
+    // Paid "clear lowest" coin sink
+    const CLEAR_BASE_COST = 30;
+    const CLEAR_COST_GROWTH = 1.4;
+    let clearUseCount = 0;
+    function getClearLowestCost() {
+        return Math.floor(CLEAR_BASE_COST * Math.pow(CLEAR_COST_GROWTH, clearUseCount));
+    }
+
+    const SAVE_KEY = 'mm_session';
+
     function loadSave() {
         try {
             highScore = parseInt(localStorage.getItem('mm_highScore') || '0', 10);
@@ -72,8 +91,123 @@ const Game = (() => {
             highScore = 0;
             bestLevel = 0;
         }
+        loadSeenLevels();
         Stages.loadStageProg();
         loadCoinUpgrade();
+        tryResumeSession();
+    }
+
+    function loadSeenLevels() {
+        try {
+            const raw = localStorage.getItem('mm_seenLevels');
+            if (raw) {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) seenLevels = new Set(arr.filter(n => typeof n === 'number'));
+            }
+        } catch (e) { seenLevels = new Set(); }
+    }
+
+    function saveSeenLevels() {
+        try {
+            localStorage.setItem('mm_seenLevels', JSON.stringify(Array.from(seenLevels)));
+        } catch (e) {}
+    }
+
+    function markLevelSeen(level) {
+        if (!level || seenLevels.has(level)) return;
+        seenLevels.add(level);
+        saveSeenLevels();
+    }
+
+    const CODEX_PER_PAGE = 6;
+    function getCodexPageCount() {
+        return Math.ceil(Monster.MAX_LEVEL / CODEX_PER_PAGE);
+    }
+
+    function openCodex(fromState) {
+        codexReturnState = fromState || STATE_TITLE;
+        codexPage = 0;
+        state = STATE_CODEX;
+        Sound.buttonTap();
+    }
+
+    function saveSession() {
+        if (state !== STATE_PLAYING) return;
+        try {
+            const data = {
+                v: 1,
+                coins,
+                score,
+                mergeCount,
+                summonCount,
+                highestLevel,
+                isNewRecord,
+                hasRewardAvailable,
+                coinAccumulator,
+                bonusAdCooldown,
+                freeSummonTimer,
+                adBoostTimer,
+                coinUpgradeLevel,
+                clearUseCount,
+                stageClearTimer,
+                showTutorial,
+                tutorialStep,
+                pendingStageIntro: pendingStageIntro || null,
+                grid: Grid.getCells(),
+                stages: Stages.getSnapshot(),
+            };
+            localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        } catch (e) {}
+    }
+
+    function clearSession() {
+        try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    }
+
+    function tryResumeSession() {
+        let data;
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return false;
+            data = JSON.parse(raw);
+        } catch (e) {
+            return false;
+        }
+        if (!data || data.v !== 1 || !data.grid) return false;
+
+        Grid.init();
+        if (!Grid.setCells(data.grid)) {
+            clearSession();
+            return false;
+        }
+
+        coins = Number(data.coins) || 0;
+        score = Number(data.score) || 0;
+        mergeCount = Number(data.mergeCount) || 0;
+        summonCount = Number(data.summonCount) || 0;
+        highestLevel = Number(data.highestLevel) || 0;
+        isNewRecord = !!data.isNewRecord;
+        hasRewardAvailable = data.hasRewardAvailable !== false;
+        coinAccumulator = Number(data.coinAccumulator) || 0;
+        bonusAdCooldown = Math.max(0, Number(data.bonusAdCooldown) || 0);
+        freeSummonTimer = Math.max(0, Number(data.freeSummonTimer) || 0);
+        adBoostTimer = Math.max(0, Number(data.adBoostTimer) || 0);
+        coinUpgradeLevel = Number(data.coinUpgradeLevel) || 0;
+        clearUseCount = Math.max(0, Number(data.clearUseCount) || 0);
+        stageClearTimer = Math.max(0, Number(data.stageClearTimer) || 0);
+        showTutorial = !!data.showTutorial;
+        tutorialStep = Number(data.tutorialStep) || 0;
+        pendingStageIntro = data.pendingStageIntro || null;
+
+        Stages.restoreSnapshot(data.stages);
+        Particles.clear();
+
+        // Make sure levels present on the restored grid are in the codex
+        Grid.getOccupiedCells().forEach(c => markLevelSeen(c.monster.level));
+
+        state = STATE_PLAYING;
+        Ads.showBanner();
+        return true;
     }
 
     function saveBest() {
@@ -94,6 +228,7 @@ const Game = (() => {
     }
 
     function startGame() {
+        clearSession();
         state = STATE_PLAYING;
         coins = 80;
         score = 0;
@@ -107,6 +242,7 @@ const Game = (() => {
         freeSummonTimer = 0;
         adBoostTimer = 0;
         coinUpgradeLevel = 0;
+        clearUseCount = 0;
         saveCoinUpgrade();
 
         Grid.init();
@@ -120,10 +256,13 @@ const Game = (() => {
                 Particles.spawnSummon(pos.x, pos.y);
             }
         }
+        markLevelSeen(1);
 
         stageClearTimer = 0;
+        saveTimer = 0;
         Stages.init();
         Stages.loadStageProg();
+        pendingStageIntro = Stages.getCurrentIntro();
 
         // Show tutorial on first ever play
         try {
@@ -171,6 +310,7 @@ const Game = (() => {
         Renderer.addMergeAnimation(result.row, result.col, result.level);
         Particles.spawnMergeExplosion(pos.x, pos.y, result.level);
         Sound.merge();
+        markLevelSeen(result.level);
 
         // Stage progress
         Stages.onMerge();
@@ -252,6 +392,7 @@ const Game = (() => {
             Particles.spawnSummon(pos.x, pos.y);
             Renderer.addMergeAnimation(result.row, result.col, result.level);
             Sound.summon();
+            markLevelSeen(result.level);
         }
 
         Stages.onSummon();
@@ -265,9 +406,32 @@ const Game = (() => {
     function handleTap(x, y) {
         Sound.resume();
 
+        if (state === STATE_CODEX) {
+            if (UI.hitTestCodexBack(x, y)) {
+                state = codexReturnState;
+                Sound.buttonTap();
+                return;
+            }
+            if (UI.hitTestCodexPrev(x, y)) {
+                codexPage = Math.max(0, codexPage - 1);
+                Sound.buttonTap();
+                return;
+            }
+            if (UI.hitTestCodexNext(x, y)) {
+                codexPage = Math.min(getCodexPageCount() - 1, codexPage + 1);
+                Sound.buttonTap();
+                return;
+            }
+            return;
+        }
+
         if (state === STATE_TITLE) {
             if (UI.hitTestStartButton(x, y)) {
                 startGame();
+                return;
+            }
+            if (UI.hitTestCodexButton(x, y)) {
+                openCodex(STATE_TITLE);
                 return;
             }
             if (UI.hitTestMuteButton(x, y)) {
@@ -278,8 +442,18 @@ const Game = (() => {
         }
 
         if (state === STATE_PLAYING) {
+            // Dismiss stage intro overlay first
+            if (pendingStageIntro) {
+                pendingStageIntro = null;
+                Sound.buttonTap();
+                return;
+            }
             if (showTutorial) {
                 dismissTutorial();
+                return;
+            }
+            if (UI.hitTestCodexButton(x, y)) {
+                openCodex(STATE_PLAYING);
                 return;
             }
             if (UI.hitTestSummonButton(x, y)) {
@@ -302,6 +476,10 @@ const Game = (() => {
                 activateSpeedBoost();
                 return;
             }
+            if (UI.hitTestClearLowestButton(x, y)) {
+                handleClearLowest();
+                return;
+            }
             if (UI.hitTestMuteButton(x, y)) {
                 Sound.setMuted(!Sound.isMuted());
                 return;
@@ -309,6 +487,10 @@ const Game = (() => {
         }
 
         if (state === STATE_GAMEOVER) {
+            if (UI.hitTestCodexButton(x, y)) {
+                openCodex(STATE_GAMEOVER);
+                return;
+            }
             if (UI.hitTestRewardButton(x, y)) {
                 watchRewardAd();
                 return;
@@ -347,6 +529,30 @@ const Game = (() => {
         UI.showMilestone(`SPEED UP! x${mult.toFixed(1)}`);
         Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
         Sound.milestone();
+    }
+
+    function handleClearLowest() {
+        if (state !== STATE_PLAYING) return;
+        const cost = getClearLowestCost();
+        if (coins < cost) return;
+        const removed = Grid.removeOneLowest();
+        if (!removed) return;
+        coins -= cost;
+        clearUseCount++;
+        const pos = Renderer.cellToPixel(removed.row, removed.col);
+        Particles.spawnSummon(pos.x, pos.y);
+        Sound.drop();
+    }
+
+    function getClearLowestInfo() {
+        const occupied = Grid.getOccupiedCells();
+        const hasTarget = occupied.length > 0;
+        const cost = getClearLowestCost();
+        return {
+            cost,
+            hasTarget,
+            canAfford: coins >= cost && hasTarget,
+        };
     }
 
     function activateSpeedBoost() {
@@ -410,6 +616,7 @@ const Game = (() => {
         Stages.advanceStage();
         Stages.saveStageProg();
         stageClearTimer = 0;
+        pendingStageIntro = Stages.getCurrentIntro();
     }
 
     function getSummonCostForN(n) {
@@ -422,6 +629,7 @@ const Game = (() => {
 
     function triggerGameOver() {
         state = STATE_GAMEOVER;
+        clearSession();
         hasRewardAvailable = true;
 
         // Final score
@@ -454,27 +662,38 @@ const Game = (() => {
             Particles.draw(ctx);
         }
 
-        if (state === STATE_PLAYING) {
-            // Generate coins (with multiplier)
-            const baseCps = Grid.getTotalCoinsPerSecond();
-            const cps = baseCps * getTotalCoinMultiplier();
-            coinAccumulator += cps * dt;
-            coinSoundTimer -= dt;
-            if (coinAccumulator >= 1) {
-                const whole = Math.floor(coinAccumulator);
-                coins += whole;
-                coinAccumulator -= whole;
+        if (state === STATE_CODEX) {
+            UI.drawCodex(ctx, w, h, timestamp, codexPage, getCodexPageCount(), seenLevels);
+        }
 
-                // Coin particle + sound (throttled)
-                if (coinSoundTimer <= 0) {
-                    coinSoundTimer = 0.5;
-                    // Spawn coin pop from a random occupied cell
-                    const occupied = Grid.getOccupiedCells();
-                    if (occupied.length > 0) {
-                        const rndCell = occupied[Math.floor(Math.random() * occupied.length)];
-                        const pos = Renderer.cellToPixel(rndCell.row, rndCell.col);
-                        Particles.spawnCoinPop(pos.x, pos.y - Renderer.getGridLayout().monsterRadius);
-                        Sound.coin();
+        if (state === STATE_PLAYING) {
+            // Pause coin generation / sound effects while an ad is on screen
+            const paused = (Ads.isAdPlaying && Ads.isAdPlaying()) ||
+                !!pendingStageIntro ||
+                (typeof document !== 'undefined' && document.visibilityState === 'hidden');
+
+            if (!paused) {
+                // Generate coins (with multiplier)
+                const baseCps = Grid.getTotalCoinsPerSecond();
+                const cps = baseCps * getTotalCoinMultiplier();
+                coinAccumulator += cps * dt;
+                coinSoundTimer -= dt;
+                if (coinAccumulator >= 1) {
+                    const whole = Math.floor(coinAccumulator);
+                    coins += whole;
+                    coinAccumulator -= whole;
+
+                    // Coin particle + sound (throttled)
+                    if (coinSoundTimer <= 0) {
+                        coinSoundTimer = 0.5;
+                        // Spawn coin pop from a random occupied cell
+                        const occupied = Grid.getOccupiedCells();
+                        if (occupied.length > 0) {
+                            const rndCell = occupied[Math.floor(Math.random() * occupied.length)];
+                            const pos = Renderer.cellToPixel(rndCell.row, rndCell.col);
+                            Particles.spawnCoinPop(pos.x, pos.y - Renderer.getGridLayout().monsterRadius);
+                            Sound.coin();
+                        }
                     }
                 }
             }
@@ -520,7 +739,8 @@ const Game = (() => {
                 cooldownLeft: freeSummonTimer,
             };
             const coinSpeedInfo = getCoinSpeedInfo();
-            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo);
+            const clearLowestInfo = getClearLowestInfo();
+            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo, clearLowestInfo);
 
             Particles.update(dt);
             Particles.draw(ctx);
@@ -557,10 +777,22 @@ const Game = (() => {
                 UI.drawTutorial(ctx, w, h, tutorialStep);
             }
 
+            // Stage intro narrative overlay (shown once when entering a stage)
+            if (pendingStageIntro) {
+                UI.drawStageIntro(ctx, w, h, pendingStageIntro);
+            }
+
             // Banner ad space (bottom 60px)
             if (Ads.isBannerShowing()) {
                 ctx.fillStyle = 'rgba(0,0,0,0.05)';
                 ctx.fillRect(0, h - 60, w, 60);
+            }
+
+            // Periodic session save
+            saveTimer += dt;
+            if (saveTimer >= SAVE_INTERVAL) {
+                saveTimer = 0;
+                saveSession();
             }
         }
 
@@ -571,6 +803,7 @@ const Game = (() => {
 
             const cost = Monster.summonCost(summonCount);
             UI.drawHUD(ctx, w, h, coins, score, cost, false);
+            UI.resetPlayButtons();
 
             Particles.update(dt);
             Particles.draw(ctx);
@@ -587,6 +820,7 @@ const Game = (() => {
 
     return {
         loadSave,
+        saveSession,
         startGame,
         handleMerge,
         handleMove,

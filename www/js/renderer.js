@@ -5,7 +5,18 @@ const Renderer = (() => {
     let canvas, ctx;
     let width, height, dpr;
     let gridX, gridY, gridSize, cellSize, cellPadding, monsterRadius;
+    let safeTop = 0, safeBottom = 0;
     let bgHue = 190;
+
+    function readSafeInsets() {
+        const style = getComputedStyle(document.documentElement);
+        const parse = (v) => {
+            const n = parseFloat(v);
+            return isNaN(n) ? 0 : n;
+        };
+        safeTop = parse(style.getPropertyValue('--safe-top'));
+        safeBottom = parse(style.getPropertyValue('--safe-bottom'));
+    }
 
     // Animation state
     let mergeAnimations = [];  // { row, col, level, progress, scale }
@@ -30,23 +41,28 @@ const Renderer = (() => {
         canvas.style.width = width + 'px';
         canvas.style.height = height + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        readSafeInsets();
         recalcLayout();
     }
 
     function recalcLayout() {
         const maxGridWidth = width * 0.92;
-        const maxGridHeight = height * 0.48;
+        const usableHeight = height - safeTop - safeBottom;
+        const maxGridHeight = usableHeight * 0.48;
         gridSize = Math.min(maxGridWidth, maxGridHeight);
         cellSize = gridSize / Grid.COLS;
         cellPadding = cellSize * 0.08;
         monsterRadius = (cellSize - cellPadding * 2) * 0.42;
         gridX = (width - gridSize) / 2;
-        gridY = height * 0.16;
+        gridY = safeTop + usableHeight * 0.16;
     }
 
     function getGridLayout() {
         return { gridX, gridY, gridSize, cellSize, cellPadding, monsterRadius };
     }
+
+    function getSafeTop() { return safeTop; }
+    function getSafeBottom() { return safeBottom; }
 
     function cellToPixel(row, col) {
         return {
@@ -152,7 +168,7 @@ const Renderer = (() => {
                     if (mergeablePairs.has(key)) {
                         const pulse = 0.2 + Math.sin(time * 0.005) * 0.1;
                         const data = Monster.getLevelData(cell.level);
-                        const glowColor = data.color === 'rainbow' ? '#FFD700' : data.color;
+                        const glowColor = Monster.getGlowColor(data);
                         ctx.save();
                         ctx.globalAlpha = pulse;
                         ctx.strokeStyle = glowColor;
@@ -251,6 +267,8 @@ const Renderer = (() => {
         drawRoundRect,
         getWidth,
         getHeight,
+        getSafeTop,
+        getSafeBottom,
         getCtx,
         getCanvas,
     };

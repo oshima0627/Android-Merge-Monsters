@@ -14,8 +14,8 @@
         // Initialize modules
         Renderer.init(canvas);
         Sound.init();
-        Game.loadSave();
         Ads.init();
+        Game.loadSave();
 
         // Set up input
         Input.init(canvas, {
@@ -35,6 +35,18 @@
         // Resume audio on first interaction
         document.addEventListener('click', () => Sound.resume(), { once: true });
         document.addEventListener('touchstart', () => Sound.resume(), { once: true });
+
+        // Persist session when the app is backgrounded or closed
+        const persist = () => {
+            if (Game.getState && Game.getState() === Game.STATE_PLAYING) {
+                Game.saveSession();
+            }
+        };
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') persist();
+        });
+        window.addEventListener('pagehide', persist);
+        window.addEventListener('beforeunload', persist);
 
         // Start game loop
         requestAnimationFrame(Game.update);

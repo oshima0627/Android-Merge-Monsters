@@ -11,6 +11,23 @@ const Ads = (() => {
     let gameOverCount = 0;
     let rewardCallback = null;
     let AdMobRef = null;
+    let adPlaying = false;
+    let adPlayingTimeout = null;
+
+    function markAdStart() {
+        adPlaying = true;
+        if (adPlayingTimeout) clearTimeout(adPlayingTimeout);
+        // Fallback: clear flag after 2 minutes in case close event is missed
+        adPlayingTimeout = setTimeout(() => { adPlaying = false; }, 120000);
+    }
+
+    function markAdEnd() {
+        adPlaying = false;
+        if (adPlayingTimeout) {
+            clearTimeout(adPlayingTimeout);
+            adPlayingTimeout = null;
+        }
+    }
 
     async function init() {
         try {
@@ -27,6 +44,24 @@ const Ads = (() => {
                         rewardCallback();
                         rewardCallback = null;
                     }
+                });
+
+                // Track ad open/close so the game can pause sound/gen while an ad is visible
+                const openEvents = [
+                    'onRewardedVideoAdOpened',
+                    'onInterstitialAdOpened',
+                ];
+                const closeEvents = [
+                    'onRewardedVideoAdClosed',
+                    'onInterstitialAdClosed',
+                    'onRewardedVideoAdFailedToShow',
+                    'onInterstitialAdFailedToShow',
+                ];
+                openEvents.forEach(ev => {
+                    try { AdMobRef.addListener(ev, () => markAdStart()); } catch (e) {}
+                });
+                closeEvents.forEach(ev => {
+                    try { AdMobRef.addListener(ev, () => markAdEnd()); } catch (e) {}
                 });
 
                 console.log('AdMob initialized successfully');
@@ -70,6 +105,7 @@ const Ads = (() => {
         // Show every 3rd game over
         if (gameOverCount % 3 !== 0) return;
         try {
+            markAdStart();
             await AdMobRef.prepareInterstitial({
                 adId: INTERSTITIAL_ID,
                 isTesting: false,
@@ -77,6 +113,7 @@ const Ads = (() => {
             await AdMobRef.showInterstitial();
         } catch (e) {
             console.warn('Interstitial failed:', e);
+            markAdEnd();
         }
     }
 
@@ -89,6 +126,7 @@ const Ads = (() => {
         }
         rewardCallback = callback;
         try {
+            markAdStart();
             await AdMobRef.prepareRewardVideoAd({
                 adId: REWARD_ID,
                 isTesting: false,
@@ -97,6 +135,7 @@ const Ads = (() => {
         } catch (e) {
             console.warn('Reward ad failed:', e);
             rewardCallback = null;
+            markAdEnd();
         }
     }
 
@@ -108,6 +147,10 @@ const Ads = (() => {
         return bannerShowing;
     }
 
+    function isAdPlaying() {
+        return adPlaying;
+    }
+
     return {
         init,
         showBanner,
@@ -116,5 +159,6 @@ const Ads = (() => {
         showReward,
         isAvailable,
         isBannerShowing,
+        isAdPlaying,
     };
 })();
