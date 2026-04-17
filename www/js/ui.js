@@ -9,7 +9,6 @@ const UI = (() => {
     let bonusCoinButton = { x: 0, y: 0, w: 0, h: 0 };
     let coinUpgradeButton = { x: 0, y: 0, w: 0, h: 0 };
     let speedBoostButton = { x: 0, y: 0, w: 0, h: 0 };
-    let clearLowestButton = { x: 0, y: 0, w: 0, h: 0 };
     let restartButton = { x: 0, y: 0, w: 0, h: 0 };
     let rewardButton = { x: 0, y: 0, w: 0, h: 0 };
     let muteButton = { x: 0, y: 0, w: 0, h: 0 };
@@ -29,7 +28,6 @@ const UI = (() => {
         bonusCoinButton = { ...ZERO };
         coinUpgradeButton = { ...ZERO };
         speedBoostButton = { ...ZERO };
-        clearLowestButton = { ...ZERO };
         codexButton = { ...ZERO };
     }
 
@@ -141,7 +139,7 @@ const UI = (() => {
         ctx.restore();
     }
 
-    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo, clearLowestInfo) {
+    function drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo) {
         ctx.save();
 
         const safeTop = Renderer.getSafeTop();
@@ -193,9 +191,8 @@ const UI = (() => {
         // Ad row: bonus coins (left) + speed boost (right)
         drawAdRow(ctx, w, h, bonusCoinInfo, coinSpeedInfo);
 
-        // Speed upgrade + Clear-lowest (two-column row, below ad row)
+        // Speed upgrade (compact, below ad row)
         drawSpeedUpgrade(ctx, w, h, coinSpeedInfo);
-        drawClearLowest(ctx, w, h, clearLowestInfo);
 
         // Mute button (left side, below HUD bar)
         const muteSize = 32;
@@ -360,9 +357,9 @@ const UI = (() => {
         }
 
         const layout = Renderer.getGridLayout();
-        const btnW = (w - 24) / 2;
+        const btnW = w * 0.5;
         const btnH = 32;
-        const btnX = 8;
+        const btnX = (w - btnW) / 2;
         const btnY = layout.gridY + layout.gridSize + 126;
         coinUpgradeButton = { x: btnX, y: btnY, w: btnW, h: btnH };
 
@@ -392,38 +389,6 @@ const UI = (() => {
             ctx.font = `bold ${11}px Arial, sans-serif`;
             ctx.fillText('⬆ SPEED MAX', btnX + btnW / 2, btnY + btnH / 2);
         }
-        ctx.restore();
-    }
-
-    function drawClearLowest(ctx, w, h, info) {
-        if (!info) {
-            clearLowestButton = { x: 0, y: 0, w: 0, h: 0 };
-            return;
-        }
-
-        const layout = Renderer.getGridLayout();
-        const btnW = (w - 24) / 2;
-        const btnH = 32;
-        const btnX = 16 + btnW;
-        const btnY = layout.gridY + layout.gridSize + 126;
-        clearLowestButton = { x: btnX, y: btnY, w: btnW, h: btnH };
-
-        ctx.save();
-        const active = info.canAfford;
-        ctx.fillStyle = active ? '#E05555' : '#888';
-        ctx.globalAlpha = active ? 1 : 0.5;
-        Renderer.drawRoundRect(ctx, btnX, btnY, btnW, btnH, btnH / 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#fff';
-        ctx.font = `bold ${11}px Arial, sans-serif`;
-        const label = info.hasTarget
-            ? `🧹 CLEAR  🪙${formatNumber(info.cost)}`
-            : '🧹 CLEAR';
-        ctx.fillText(label, btnX + btnW / 2, btnY + btnH / 2);
         ctx.restore();
     }
 
@@ -1028,10 +993,6 @@ const UI = (() => {
         return hitRect(speedBoostButton, x, y);
     }
 
-    function hitTestClearLowestButton(x, y) {
-        return hitRect(clearLowestButton, x, y);
-    }
-
     function hitTestMuteButton(x, y) {
         return hitRect(muteButton, x, y);
     }
@@ -1078,7 +1039,6 @@ const UI = (() => {
         hitTestBonusCoinButton,
         hitTestCoinUpgradeButton,
         hitTestSpeedBoostButton,
-        hitTestClearLowestButton,
         hitTestRestartButton,
         hitTestRewardButton,
         hitTestMuteButton,

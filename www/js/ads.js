@@ -13,6 +13,11 @@ const Ads = (() => {
     let AdMobRef = null;
     let adPlaying = false;
     let adPlayingTimeout = null;
+    // Preloaded ad state so the user sees no lag when tapping 📺
+    let rewardReady = false;
+    let rewardLoading = false;
+    let interstitialReady = false;
+    let interstitialLoading = false;
 
     function markAdStart() {
         adPlaying = true;
@@ -27,6 +32,44 @@ const Ads = (() => {
             clearTimeout(adPlayingTimeout);
             adPlayingTimeout = null;
         }
+    }
+
+    async function preloadRewardAd() {
+        if (!admobAvailable || rewardReady || rewardLoading) return;
+        rewardLoading = true;
+        try {
+            await AdMobRef.prepareRewardVideoAd({
+                adId: REWARD_ID,
+                isTesting: false,
+            });
+            rewardReady = true;
+        } catch (e) {
+            console.warn('Reward preload failed:', e);
+            rewardReady = false;
+            // Retry after a short delay so a transient network hiccup doesn't
+            // permanently kill the 📺 button
+            setTimeout(() => { rewardLoading = false; preloadRewardAd(); }, 5000);
+            return;
+        }
+        rewardLoading = false;
+    }
+
+    async function preloadInterstitialAd() {
+        if (!admobAvailable || interstitialReady || interstitialLoading) return;
+        interstitialLoading = true;
+        try {
+            await AdMobRef.prepareInterstitial({
+                adId: INTERSTITIAL_ID,
+                isTesting: false,
+            });
+            interstitialReady = true;
+        } catch (e) {
+            console.warn('Interstitial preload failed:', e);
+            interstitialReady = false;
+            setTimeout(() => { interstitialLoading = false; preloadInterstitialAd(); }, 5000);
+            return;
+        }
+        interstitialLoading = false;
     }
 
     async function init() {
@@ -64,7 +107,17 @@ const Ads = (() => {
                     try { AdMobRef.addListener(ev, () => markAdEnd()); } catch (e) {}
                 });
 
+                // Re-preload a fresh ad once the user closes the previous one
+                try { AdMobRef.addListener('onRewardedVideoAdClosed', () => { rewardReady = false; preloadRewardAd(); }); } catch (e) {}
+                try { AdMobRef.addListener('onRewardedVideoAdFailedToShow', () => { rewardReady = false; preloadRewardAd(); }); } catch (e) {}
+                try { AdMobRef.addListener('onInterstitialAdClosed', () => { interstitialReady = false; preloadInterstitialAd(); }); } catch (e) {}
+                try { AdMobRef.addListener('onInterstitialAdFailedToShow', () => { interstitialReady = false; preloadInterstitialAd(); }); } catch (e) {}
+
                 console.log('AdMob initialized successfully');
+
+                // Kick off initial preloads so the first tap is instant
+                preloadRewardAd();
+                preloadInterstitialAd();
             } else {
                 console.log('AdMob not available (web environment)');
             }
@@ -106,14 +159,23 @@ const Ads = (() => {
         if (gameOverCount % 3 !== 0) return;
         try {
             markAdStart();
-            await AdMobRef.prepareInterstitial({
-                adId: INTERSTITIAL_ID,
-                isTesting: false,
-            });
+            if (!interstitialReady) {
+                // Fallback: not preloaded yet, prepare on-demand
+                await AdMobRef.prepareInterstitial({
+                    adId: INTERSTITIAL_ID,
+                    isTesting: false,
+                });
+                interstitialReady = true;
+            }
             await AdMobRef.showInterstitial();
+            interstitialReady = false;
+            // Preload next one in the background
+            preloadInterstitialAd();
         } catch (e) {
             console.warn('Interstitial failed:', e);
+            interstitialReady = false;
             markAdEnd();
+            preloadInterstitialAd();
         }
     }
 
@@ -127,15 +189,24 @@ const Ads = (() => {
         rewardCallback = callback;
         try {
             markAdStart();
-            await AdMobRef.prepareRewardVideoAd({
-                adId: REWARD_ID,
-                isTesting: false,
-            });
+            if (!rewardReady) {
+                // Fallback: not preloaded yet, prepare on-demand
+                await AdMobRef.prepareRewardVideoAd({
+                    adId: REWARD_ID,
+                    isTesting: false,
+                });
+                rewardReady = true;
+            }
             await AdMobRef.showRewardVideoAd();
+            rewardReady = false;
+            // Preload next one in the background
+            preloadRewardAd();
         } catch (e) {
             console.warn('Reward ad failed:', e);
             rewardCallback = null;
+            rewardReady = false;
             markAdEnd();
+            preloadRewardAd();
         }
     }
 

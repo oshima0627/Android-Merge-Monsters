@@ -73,14 +73,6 @@ const Game = (() => {
     let saveTimer = 0;
     const SAVE_INTERVAL = 2.0;
 
-    // Paid "clear lowest" coin sink
-    const CLEAR_BASE_COST = 30;
-    const CLEAR_COST_GROWTH = 1.4;
-    let clearUseCount = 0;
-    function getClearLowestCost() {
-        return Math.floor(CLEAR_BASE_COST * Math.pow(CLEAR_COST_GROWTH, clearUseCount));
-    }
-
     const SAVE_KEY = 'mm_session';
 
     function loadSave() {
@@ -148,7 +140,6 @@ const Game = (() => {
                 freeSummonTimer,
                 adBoostTimer,
                 coinUpgradeLevel,
-                clearUseCount,
                 stageClearTimer,
                 showTutorial,
                 tutorialStep,
@@ -193,7 +184,6 @@ const Game = (() => {
         freeSummonTimer = Math.max(0, Number(data.freeSummonTimer) || 0);
         adBoostTimer = Math.max(0, Number(data.adBoostTimer) || 0);
         coinUpgradeLevel = Number(data.coinUpgradeLevel) || 0;
-        clearUseCount = Math.max(0, Number(data.clearUseCount) || 0);
         stageClearTimer = Math.max(0, Number(data.stageClearTimer) || 0);
         showTutorial = !!data.showTutorial;
         tutorialStep = Number(data.tutorialStep) || 0;
@@ -242,7 +232,6 @@ const Game = (() => {
         freeSummonTimer = 0;
         adBoostTimer = 0;
         coinUpgradeLevel = 0;
-        clearUseCount = 0;
         saveCoinUpgrade();
 
         Grid.init();
@@ -476,10 +465,6 @@ const Game = (() => {
                 activateSpeedBoost();
                 return;
             }
-            if (UI.hitTestClearLowestButton(x, y)) {
-                handleClearLowest();
-                return;
-            }
             if (UI.hitTestMuteButton(x, y)) {
                 Sound.setMuted(!Sound.isMuted());
                 return;
@@ -529,30 +514,6 @@ const Game = (() => {
         UI.showMilestone(`SPEED UP! x${mult.toFixed(1)}`);
         Particles.spawnConfetti(Renderer.getWidth(), Renderer.getHeight());
         Sound.milestone();
-    }
-
-    function handleClearLowest() {
-        if (state !== STATE_PLAYING) return;
-        const cost = getClearLowestCost();
-        if (coins < cost) return;
-        const removed = Grid.removeOneLowest();
-        if (!removed) return;
-        coins -= cost;
-        clearUseCount++;
-        const pos = Renderer.cellToPixel(removed.row, removed.col);
-        Particles.spawnSummon(pos.x, pos.y);
-        Sound.drop();
-    }
-
-    function getClearLowestInfo() {
-        const occupied = Grid.getOccupiedCells();
-        const hasTarget = occupied.length > 0;
-        const cost = getClearLowestCost();
-        return {
-            cost,
-            hasTarget,
-            canAfford: coins >= cost && hasTarget,
-        };
     }
 
     function activateSpeedBoost() {
@@ -739,8 +700,7 @@ const Game = (() => {
                 cooldownLeft: freeSummonTimer,
             };
             const coinSpeedInfo = getCoinSpeedInfo();
-            const clearLowestInfo = getClearLowestInfo();
-            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo, clearLowestInfo);
+            UI.drawHUD(ctx, w, h, coins, score, summonCost, canSummon, bonusCoinInfo, freeSummonInfo, coinSpeedInfo);
 
             Particles.update(dt);
             Particles.draw(ctx);

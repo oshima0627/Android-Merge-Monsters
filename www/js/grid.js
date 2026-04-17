@@ -162,15 +162,6 @@ const Grid = (() => {
         return toRemove;
     }
 
-    function removeOneLowest() {
-        const occupied = getOccupiedCells();
-        if (occupied.length === 0) return null;
-        occupied.sort((a, b) => a.monster.level - b.monster.level);
-        const target = occupied[0];
-        clearCell(target.row, target.col);
-        return { row: target.row, col: target.col, level: target.monster.level };
-    }
-
     function getTotalCoinsPerSecond() {
         let total = 0;
         for (let r = 0; r < ROWS; r++) {
@@ -237,7 +228,6 @@ const Grid = (() => {
         isGameOver,
         getMergeablePairs,
         removeLowestTwo,
-        removeOneLowest,
         getTotalCoinsPerSecond,
         getHighestLevel,
         getCells,
