@@ -50,14 +50,12 @@ const Ads = (() => {
                 const openEvents = [
                     'onRewardedVideoAdOpened',
                     'onInterstitialAdOpened',
-                    'onAdLoaded',
                 ];
                 const closeEvents = [
                     'onRewardedVideoAdClosed',
                     'onInterstitialAdClosed',
                     'onRewardedVideoAdFailedToShow',
                     'onInterstitialAdFailedToShow',
-                    'onAdFailedToLoad',
                 ];
                 openEvents.forEach(ev => {
                     try { AdMobRef.addListener(ev, () => markAdStart()); } catch (e) {}

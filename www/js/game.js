@@ -159,6 +159,7 @@ const Game = (() => {
                 stageClearTimer,
                 showTutorial,
                 tutorialStep,
+                pendingStageIntro: pendingStageIntro || null,
                 grid: Grid.getCells(),
                 stages: Stages.getSnapshot(),
             };
@@ -204,6 +205,7 @@ const Game = (() => {
         stageClearTimer = Math.max(0, Number(data.stageClearTimer) || 0);
         showTutorial = !!data.showTutorial;
         tutorialStep = Number(data.tutorialStep) || 0;
+        pendingStageIntro = data.pendingStageIntro || null;
 
         Stages.restoreSnapshot(data.stages);
         Particles.clear();
@@ -818,6 +820,7 @@ const Game = (() => {
 
             const cost = Monster.summonCost(summonCount);
             UI.drawHUD(ctx, w, h, coins, score, cost, false);
+            UI.resetPlayButtons();
 
             Particles.update(dt);
             Particles.draw(ctx);

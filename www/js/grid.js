@@ -208,7 +208,7 @@ const Grid = (() => {
             for (let c = 0; c < COLS; c++) {
                 const cell = newCells[r][c];
                 if (cell && typeof cell.level === 'number' && cell.level >= 1) {
-                    restored[r][c] = { level: cell.level };
+                    restored[r][c] = { level: Math.min(cell.level, Monster.MAX_LEVEL) };
                 } else {
                     restored[r][c] = null;
                 }

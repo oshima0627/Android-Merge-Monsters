@@ -22,6 +22,17 @@ const UI = (() => {
     let milestoneText = null;   // { text, progress, duration }
     let newRecordText = null;   // { progress, duration }
 
+    const ZERO = { x: 0, y: 0, w: 0, h: 0 };
+    function resetPlayButtons() {
+        summonButton = { ...ZERO };
+        freeSummonButton = { ...ZERO };
+        bonusCoinButton = { ...ZERO };
+        coinUpgradeButton = { ...ZERO };
+        speedBoostButton = { ...ZERO };
+        clearLowestButton = { ...ZERO };
+        codexButton = { ...ZERO };
+    }
+
     function drawTitleScreen(ctx, w, h, time, highScore, highestLevel) {
         const safeTop = Renderer.getSafeTop();
 
@@ -1071,6 +1082,7 @@ const UI = (() => {
         drawStageClear,
         drawStageIntro,
         drawCodex,
+        resetPlayButtons,
         drawTutorial,
         showMilestone,
         showNewRecord,
