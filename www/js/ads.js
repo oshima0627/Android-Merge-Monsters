@@ -2,9 +2,29 @@
  * AdMob integration via @capacitor-community/admob v6.
  */
 const Ads = (() => {
-    const BANNER_ID = 'ca-app-pub-4718076434751586/8180818511';
-    const INTERSTITIAL_ID = 'ca-app-pub-4718076434751586/2032769609';
-    const REWARD_ID = 'ca-app-pub-4718076434751586/7999412159';
+    // ========================================================================
+    // ⚠️ CLOSED TEST MODE: Using Google's official sample ad unit IDs so that
+    // testers (and the developer) can tap ads without triggering AdMob
+    // "invalid activity" enforcement.
+    //
+    // TODO: Before releasing to PRODUCTION, swap these back to the real
+    // ca-app-pub-4718076434751586/* IDs listed below and set isTesting:false.
+    // ========================================================================
+    const USE_TEST_ADS = true;
+
+    // Production ad unit IDs (do NOT tap these yourself)
+    const PROD_BANNER_ID       = 'ca-app-pub-4718076434751586/8180818511';
+    const PROD_INTERSTITIAL_ID = 'ca-app-pub-4718076434751586/2032769609';
+    const PROD_REWARD_ID       = 'ca-app-pub-4718076434751586/7999412159';
+
+    // Google sample test ad unit IDs (safe to tap during development/testing)
+    const TEST_BANNER_ID       = 'ca-app-pub-3940256099942544/6300978111';
+    const TEST_INTERSTITIAL_ID = 'ca-app-pub-3940256099942544/1033173712';
+    const TEST_REWARD_ID       = 'ca-app-pub-3940256099942544/5224354917';
+
+    const BANNER_ID       = USE_TEST_ADS ? TEST_BANNER_ID       : PROD_BANNER_ID;
+    const INTERSTITIAL_ID = USE_TEST_ADS ? TEST_INTERSTITIAL_ID : PROD_INTERSTITIAL_ID;
+    const REWARD_ID       = USE_TEST_ADS ? TEST_REWARD_ID       : PROD_REWARD_ID;
 
     let admobAvailable = false;
     let bannerShowing = false;
@@ -40,7 +60,7 @@ const Ads = (() => {
         try {
             await AdMobRef.prepareRewardVideoAd({
                 adId: REWARD_ID,
-                isTesting: false,
+                isTesting: USE_TEST_ADS,
             });
             rewardReady = true;
         } catch (e) {
@@ -60,7 +80,7 @@ const Ads = (() => {
         try {
             await AdMobRef.prepareInterstitial({
                 adId: INTERSTITIAL_ID,
-                isTesting: false,
+                isTesting: USE_TEST_ADS,
             });
             interstitialReady = true;
         } catch (e) {
@@ -77,7 +97,7 @@ const Ads = (() => {
             if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.AdMob) {
                 AdMobRef = window.Capacitor.Plugins.AdMob;
                 await AdMobRef.initialize({
-                    initializeForTesting: false,
+                    initializeForTesting: USE_TEST_ADS,
                 });
                 admobAvailable = true;
 
@@ -134,7 +154,7 @@ const Ads = (() => {
                 adSize: 'BANNER',
                 position: 'BOTTOM_CENTER',
                 margin: 0,
-                isTesting: false,
+                isTesting: USE_TEST_ADS,
             });
             bannerShowing = true;
         } catch (e) {
@@ -163,7 +183,7 @@ const Ads = (() => {
                 // Fallback: not preloaded yet, prepare on-demand
                 await AdMobRef.prepareInterstitial({
                     adId: INTERSTITIAL_ID,
-                    isTesting: false,
+                    isTesting: USE_TEST_ADS,
                 });
                 interstitialReady = true;
             }
@@ -193,7 +213,7 @@ const Ads = (() => {
                 // Fallback: not preloaded yet, prepare on-demand
                 await AdMobRef.prepareRewardVideoAd({
                     adId: REWARD_ID,
-                    isTesting: false,
+                    isTesting: USE_TEST_ADS,
                 });
                 rewardReady = true;
             }
