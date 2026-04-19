@@ -16,8 +16,28 @@
 </head>
 <body>
     <h1>Merge Monsters Icon Generator</h1>
-    <p>Click buttons to download each icon. Use the 512x512 for Play Store and the others for Android app icons.</p>
+    <p>
+        端末にインストール後のアイコンを差し替えるには、まず下の3枚をダウンロードし、
+        プロジェクトの <code>resources/</code> フォルダーに以下の名前で保存してください。
+    </p>
+    <ul>
+        <li><b>icon.png</b> ... 1024×1024 の通常アイコン (旧端末・ストア用)</li>
+        <li><b>icon-foreground.png</b> ... Adaptive Icon の前景 (Android 8.0以降)</li>
+        <li><b>icon-background.png</b> ... Adaptive Icon の背景</li>
+    </ul>
+    <p>
+        その後ターミナルで <code>npm run icons:generate</code> → <code>npx cap sync android</code> を実行すると、
+        必要な全サイズが自動生成され、Androidプロジェクトに反映されます。
+    </p>
 
+    <h2>Capacitor Assets 用 (推奨)</h2>
+    <div>
+        <button onclick="downloadIconOnly(1024)">Download icon.png (1024×1024)</button>
+        <button onclick="downloadForeground(1024)">Download icon-foreground.png (1024×1024)</button>
+        <button onclick="downloadBackground(1024)">Download icon-background.png (1024×1024)</button>
+    </div>
+
+    <h2>個別サイズ (手動配置用)</h2>
     <div>
         <button onclick="downloadIcon(512)">Download 512x512 (Play Store)</button>
         <button onclick="downloadIcon(192)">Download 192x192 (xxxhdpi)</button>
@@ -32,7 +52,15 @@
     <div class="row">
         <div class="item">
             <canvas id="preview512" width="512" height="512"></canvas>
-            <div>512x512</div>
+            <div>512x512 (通常アイコン)</div>
+        </div>
+        <div class="item">
+            <canvas id="previewFg" width="432" height="432" style="background:#eee;"></canvas>
+            <div>Adaptive 前景 (中央66%が安全領域)</div>
+        </div>
+        <div class="item">
+            <canvas id="previewBg" width="432" height="432"></canvas>
+            <div>Adaptive 背景</div>
         </div>
         <div class="item">
             <canvas id="previewFeature" width="1024" height="500"></canvas>
@@ -189,6 +217,123 @@
         ctx.fillText('M', cx, cy + r * 0.45);
     }
 
+    // Adaptive icon foreground: monster only, transparent background, fits in
+    // central 66% safe zone so it survives Android's circular/squircle masks.
+    function drawForeground(canvas, size) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, size, size);
+        const cx = size / 2;
+        const cy = size / 2;
+        // Safe zone is 66% of canvas; monster body radius based on that.
+        const r = size * 0.22;
+
+        // Body
+        const bodyGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.3, 0, cx, cy, r);
+        bodyGrad.addColorStop(0, '#FF9999');
+        bodyGrad.addColorStop(0.5, '#FF6B6B');
+        bodyGrad.addColorStop(1, '#E54545');
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Body highlight
+        const hlGrad = ctx.createRadialGradient(cx - r * 0.3, cy - r * 0.35, 0, cx, cy, r);
+        hlGrad.addColorStop(0, 'rgba(255,255,255,0.45)');
+        hlGrad.addColorStop(0.4, 'rgba(255,255,255,0.1)');
+        hlGrad.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = hlGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Crown
+        const crownY = cy - r * 0.85;
+        const crownSize = r * 0.5;
+        ctx.fillStyle = '#FFD700';
+        ctx.strokeStyle = '#CC9900';
+        ctx.lineWidth = size * 0.003;
+        ctx.beginPath();
+        ctx.moveTo(cx - crownSize, crownY);
+        ctx.lineTo(cx - crownSize * 0.65, crownY - crownSize * 0.85);
+        ctx.lineTo(cx - crownSize * 0.3, crownY - crownSize * 0.2);
+        ctx.lineTo(cx, crownY - crownSize * 1.05);
+        ctx.lineTo(cx + crownSize * 0.3, crownY - crownSize * 0.2);
+        ctx.lineTo(cx + crownSize * 0.65, crownY - crownSize * 0.85);
+        ctx.lineTo(cx + crownSize, crownY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Crown jewels
+        ctx.fillStyle = '#FF4444';
+        ctx.beginPath();
+        ctx.arc(cx, crownY - crownSize * 0.7, crownSize * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#4488FF';
+        ctx.beginPath();
+        ctx.arc(cx - crownSize * 0.45, crownY - crownSize * 0.35, crownSize * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + crownSize * 0.45, crownY - crownSize * 0.35, crownSize * 0.07, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eyes
+        const eyeY = cy - r * 0.15;
+        const eyeSpacing = r * 0.3;
+        const eyeR = r * 0.15;
+        drawStar(ctx, cx - eyeSpacing, eyeY, eyeR * 0.45, eyeR * 1.1, 4, '#FFD700');
+        drawStar(ctx, cx + eyeSpacing, eyeY, eyeR * 0.45, eyeR * 1.1, 4, '#FFD700');
+
+        // Mouth
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = r * 0.06;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(cx, cy + r * 0.15, r * 0.22, 0.1 * Math.PI, 0.9 * Math.PI);
+        ctx.stroke();
+
+        // Cheeks
+        ctx.fillStyle = 'rgba(255,150,150,0.35)';
+        ctx.beginPath();
+        ctx.ellipse(cx - r * 0.5, cy + r * 0.15, r * 0.15, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + r * 0.5, cy + r * 0.15, r * 0.15, r * 0.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // "M" text
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = size * 0.006;
+        ctx.font = `bold ${r * 0.5}px 'Arial Rounded MT Bold', Arial, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText('M', cx, cy + r * 0.45);
+        ctx.fillText('M', cx, cy + r * 0.45);
+    }
+
+    // Adaptive icon background: solid gradient that fills the whole canvas.
+    function drawBackground(canvas, size) {
+        const ctx = canvas.getContext('2d');
+        const bgGrad = ctx.createLinearGradient(0, 0, size, size);
+        bgGrad.addColorStop(0, '#B8E6FF');
+        bgGrad.addColorStop(1, '#E8D0FF');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, size, size);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const dx = size * 0.08 + i * size * 0.12;
+                const dy = size * 0.08 + j * size * 0.12;
+                ctx.beginPath();
+                ctx.arc(dx, dy, size * 0.015, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    }
+
     function drawFeatureGraphic(canvas) {
         const ctx = canvas.getContext('2d');
         const w = 1024;
@@ -314,6 +459,30 @@
         downloadCanvas(canvas, `icon-${size}x${size}.png`);
     }
 
+    function downloadIconOnly(size) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        drawIcon(canvas, size);
+        downloadCanvas(canvas, 'icon.png');
+    }
+
+    function downloadForeground(size) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        drawForeground(canvas, size);
+        downloadCanvas(canvas, 'icon-foreground.png');
+    }
+
+    function downloadBackground(size) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        drawBackground(canvas, size);
+        downloadCanvas(canvas, 'icon-background.png');
+    }
+
     function downloadFeature() {
         const canvas = document.createElement('canvas');
         canvas.width = 1024;
@@ -332,6 +501,8 @@
     // Draw previews on load
     window.onload = () => {
         drawIcon(document.getElementById('preview512'), 512);
+        drawForeground(document.getElementById('previewFg'), 432);
+        drawBackground(document.getElementById('previewBg'), 432);
         drawFeatureGraphic(document.getElementById('previewFeature'));
     };
     </script>
