@@ -2,15 +2,7 @@
  * AdMob integration via @capacitor-community/admob v6.
  */
 const Ads = (() => {
-    // ========================================================================
-    // ⚠️ CLOSED TEST MODE: Using Google's official sample ad unit IDs so that
-    // testers (and the developer) can tap ads without triggering AdMob
-    // "invalid activity" enforcement.
-    //
-    // TODO: Before releasing to PRODUCTION, swap these back to the real
-    // ca-app-pub-4718076434751586/* IDs listed below and set isTesting:false.
-    // ========================================================================
-    const USE_TEST_ADS = true;
+    const USE_TEST_ADS = false;
 
     // Production ad unit IDs (do NOT tap these yourself)
     const PROD_BANNER_ID       = 'ca-app-pub-4718076434751586/8180818511';
