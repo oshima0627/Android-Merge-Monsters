@@ -56,7 +56,6 @@ const Ads = (() => {
             });
             rewardReady = true;
         } catch (e) {
-            console.warn('Reward preload failed:', e);
             rewardReady = false;
             // Retry after a short delay so a transient network hiccup doesn't
             // permanently kill the 📺 button
@@ -76,7 +75,6 @@ const Ads = (() => {
             });
             interstitialReady = true;
         } catch (e) {
-            console.warn('Interstitial preload failed:', e);
             interstitialReady = false;
             setTimeout(() => { interstitialLoading = false; preloadInterstitialAd(); }, 5000);
             return;
@@ -94,6 +92,7 @@ const Ads = (() => {
                 admobAvailable = true;
 
                 // Listen for reward earned
+
                 AdMobRef.addListener('onRewardedVideoAdReward', () => {
                     if (rewardCallback) {
                         rewardCallback();
@@ -125,17 +124,12 @@ const Ads = (() => {
                 try { AdMobRef.addListener('onInterstitialAdClosed', () => { interstitialReady = false; preloadInterstitialAd(); }); } catch (e) {}
                 try { AdMobRef.addListener('onInterstitialAdFailedToShow', () => { interstitialReady = false; preloadInterstitialAd(); }); } catch (e) {}
 
-                console.log('AdMob initialized successfully');
-
                 // Kick off initial preloads so the first tap is instant
                 preloadRewardAd();
                 preloadInterstitialAd();
-            } else {
-                console.log('AdMob not available (web environment)');
             }
-        } catch (e) {
-            console.warn('AdMob init failed:', e);
-        }
+        } catch (e) {}
+
     }
 
     async function showBanner() {
@@ -149,9 +143,8 @@ const Ads = (() => {
                 isTesting: USE_TEST_ADS,
             });
             bannerShowing = true;
-        } catch (e) {
-            console.warn('Banner show failed:', e);
-        }
+        } catch (e) {}
+
     }
 
     async function hideBanner() {
@@ -159,9 +152,8 @@ const Ads = (() => {
         try {
             await AdMobRef.hideBanner();
             bannerShowing = false;
-        } catch (e) {
-            console.warn('Banner hide failed:', e);
-        }
+        } catch (e) {}
+
     }
 
     async function showInterstitial() {
@@ -184,7 +176,6 @@ const Ads = (() => {
             // Preload next one in the background
             preloadInterstitialAd();
         } catch (e) {
-            console.warn('Interstitial failed:', e);
             interstitialReady = false;
             markAdEnd();
             preloadInterstitialAd();
@@ -193,8 +184,6 @@ const Ads = (() => {
 
     async function showReward(callback) {
         if (!admobAvailable) {
-            // In web/dev mode, simulate reward
-            console.log('Simulating reward ad (dev mode)');
             if (callback) callback();
             return;
         }
@@ -214,7 +203,6 @@ const Ads = (() => {
             // Preload next one in the background
             preloadRewardAd();
         } catch (e) {
-            console.warn('Reward ad failed:', e);
             rewardCallback = null;
             rewardReady = false;
             markAdEnd();

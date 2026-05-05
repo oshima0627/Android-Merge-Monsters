@@ -13,7 +13,6 @@ const Sound = (() => {
             masterGain.gain.value = 0.3;
             masterGain.connect(audioCtx.destination);
         } catch (e) {
-            console.warn('Web Audio API not supported:', e);
         }
     }
 

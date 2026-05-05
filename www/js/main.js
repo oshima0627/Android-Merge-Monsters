@@ -7,7 +7,6 @@
     function boot() {
         const canvas = document.getElementById('gameCanvas');
         if (!canvas) {
-            console.error('Canvas element not found');
             return;
         }
 
